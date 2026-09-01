@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.marketplace.OrderServiceTest" time="0.139" tests="5" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.marketplace.SellerFlowTest" time="2.109" tests="3" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="24"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -64,9 +64,9 @@
     <property name="socksNonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="java.class.version" value="68.0"/>
   </properties>
-  <testcase name="bothConfirm_finalizesOrderAndNegotiation" classname="com.marketplace.OrderServiceTest" time="0.01">
-    <system-out><![CDATA[2026-09-01T11:05:22.392+10:00  INFO 87090 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.marketplace.OrderServiceTest]: OrderServiceTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-2026-09-01T11:05:22.395+10:00  INFO 87090 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.marketplace.Application for test class com.marketplace.OrderServiceTest
+  <testcase name="twoSidedConfirm_finalizesOnlyAfterBothClicks" classname="com.marketplace.SellerFlowTest" time="0.305">
+    <system-out><![CDATA[11:05:20.322 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.marketplace.SellerFlowTest]: SellerFlowTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+11:05:20.359 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.marketplace.Application for test class com.marketplace.SellerFlowTest
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -77,75 +77,42 @@
 
  :: Spring Boot ::                (v3.5.4)
 
-2026-09-01T11:05:22.404+10:00  INFO 87090 --- [           main] com.marketplace.OrderServiceTest         : Starting OrderServiceTest using Java 24 with PID 87090 (started by huydinh in /Users/huydinh/Desktop/Projects/mcp_website/backend)
-2026-09-01T11:05:22.404+10:00  INFO 87090 --- [           main] com.marketplace.OrderServiceTest         : No active profile set, falling back to 1 default profile: "default"
-2026-09-01T11:05:22.427+10:00  INFO 87090 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-09-01T11:05:22.432+10:00  INFO 87090 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 3 ms. Found 9 JPA repository interfaces.
-2026-09-01T11:05:22.441+10:00  INFO 87090 --- [           main] beddedDataSourceBeanFactoryPostProcessor : Replacing 'dataSource' DataSource bean with embedded version
-2026-09-01T11:05:22.448+10:00  INFO 87090 --- [           main] o.s.j.d.e.EmbeddedDatabaseFactory        : Starting embedded database: url='jdbc:h2:mem:78524a4a-2773-4599-8f73-9670171e2527;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false', username='sa'
-2026-09-01T11:05:22.454+10:00  INFO 87090 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
-2026-09-01T11:05:22.455+10:00  INFO 87090 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
-2026-09-01T11:05:22.457+10:00  INFO 87090 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-09-01T11:05:22.458+10:00  WARN 87090 --- [           main] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
-2026-09-01T11:05:22.458+10:00  INFO 87090 --- [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
-	Database JDBC URL [Connecting through datasource 'org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseFactory$EmbeddedDataSourceProxy@2d758834']
+2026-09-01T11:05:20.492+10:00  INFO 87090 --- [           main] com.marketplace.SellerFlowTest           : Starting SellerFlowTest using Java 24 with PID 87090 (started by huydinh in /Users/huydinh/Desktop/Projects/mcp_website/backend)
+2026-09-01T11:05:20.492+10:00  INFO 87090 --- [           main] com.marketplace.SellerFlowTest           : No active profile set, falling back to 1 default profile: "default"
+2026-09-01T11:05:20.681+10:00  INFO 87090 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-01T11:05:20.701+10:00  INFO 87090 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 17 ms. Found 9 JPA repository interfaces.
+2026-09-01T11:05:20.850+10:00  INFO 87090 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-09-01T11:05:20.864+10:00  INFO 87090 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.22.Final
+2026-09-01T11:05:20.873+10:00  INFO 87090 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-09-01T11:05:20.952+10:00  INFO 87090 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-01T11:05:20.961+10:00  INFO 87090 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-09-01T11:05:21.051+10:00  INFO 87090 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:testdb user=SA
+2026-09-01T11:05:21.052+10:00  INFO 87090 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-09-01T11:05:21.059+10:00  WARN 87090 --- [           main] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-09-01T11:05:21.066+10:00  INFO 87090 --- [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
 	Database driver: undefined/unknown
 	Database version: 2.3.232
 	Autocommit mode: undefined/unknown
 	Isolation level: undefined/unknown
 	Minimum pool size: undefined/unknown
 	Maximum pool size: undefined/unknown
-2026-09-01T11:05:22.479+10:00  INFO 87090 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
-Hibernate: drop table if exists "buyer_ai_configs" cascade 
-Hibernate: drop table if exists "buyers" cascade 
-Hibernate: drop table if exists "negotiation_rounds" cascade 
-Hibernate: drop table if exists "negotiations" cascade 
-Hibernate: drop table if exists "orders" cascade 
-Hibernate: drop table if exists "products" cascade 
-Hibernate: drop table if exists "seller_ai_configs" cascade 
-Hibernate: drop table if exists "sellers" cascade 
-Hibernate: drop table if exists "users" cascade 
-Hibernate: create table "buyer_ai_configs" ("is_active" boolean, "max_budget" float(53), "min_seller_rating" float(53), "target_price" float(53), "buyer_agent_id" varchar(64) not null, "national_id" varchar(64), "style" varchar(255), primary key ("buyer_agent_id"))
-Hibernate: create table "buyers" ("national_id" varchar(64) not null, "interest" varchar(255), primary key ("national_id"))
-Hibernate: create table "negotiation_rounds" ("proposed_price" float(53), "round_number" integer not null, "negotiation_id" varchar(64) not null, "author" varchar(255), "message_context" varchar(255), primary key ("round_number", "negotiation_id"))
-Hibernate: create table "negotiations" ("current_price" float(53), "current_round" integer, "final_price" float(53), "quantity" integer, "date" timestamp(6) with time zone, "updated_at" timestamp(6) with time zone, "national_id" varchar(64), "negotiation_id" varchar(64) not null, "order_id" varchar(64), "product_id" varchar(64), "last_actor" varchar(255), "status" varchar(255), primary key ("negotiation_id"))
-Hibernate: create table "orders" ("buyer_confirmed_at" timestamp(6) with time zone, "order_date" timestamp(6) with time zone, "seller_confirmed_at" timestamp(6) with time zone, "order_id" varchar(64) not null, "status" varchar(255), primary key ("order_id"))
-Hibernate: create table "products" ("gap" float(53), "min_price" float(53), "price" float(53), "remainings" integer, "product_id" varchar(64) not null, "seller_id" varchar(64), "name" varchar(255), primary key ("product_id"))
-Hibernate: create table "seller_ai_configs" ("auto_accept_price" float(53), "max_discount_step" float(53), "agent_id" varchar(64) not null, "product_id" varchar(64), primary key ("agent_id"))
-Hibernate: create table "sellers" ("rating" float(53), "national_id" varchar(64) not null, primary key ("national_id"))
-Hibernate: create table "users" ("national_id" varchar(64) not null, "email" varchar(255), "first_name" varchar(255), "last_name" varchar(255), primary key ("national_id"))
-2026-09-01T11:05:22.483+10:00  INFO 87090 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-09-01T11:05:22.510+10:00  INFO 87090 --- [           main] com.marketplace.OrderServiceTest         : Started OrderServiceTest in 0.114 seconds (process running for 2.483)
-Hibernate: select ne1_0."negotiation_id",ne1_0."current_price",ne1_0."current_round",ne1_0."date",ne1_0."final_price",ne1_0."last_actor",ne1_0."national_id",ne1_0."order_id",ne1_0."product_id",ne1_0."quantity",ne1_0."status",ne1_0."updated_at" from "negotiations" ne1_0 where ne1_0."negotiation_id"=?
-Hibernate: select oe1_0."order_id",oe1_0."buyer_confirmed_at",oe1_0."order_date",oe1_0."seller_confirmed_at",oe1_0."status" from "orders" oe1_0 where oe1_0."order_id"=?
-Hibernate: insert into "negotiations" ("current_price","current_round","date","final_price","last_actor","national_id","order_id","product_id","quantity","status","updated_at","negotiation_id") values (?,?,?,?,?,?,?,?,?,?,?,?)
-Hibernate: insert into "orders" ("buyer_confirmed_at","order_date","seller_confirmed_at","status","order_id") values (?,?,?,?,?)
-Hibernate: update "negotiations" set "current_price"=?,"current_round"=?,"date"=?,"final_price"=?,"last_actor"=?,"national_id"=?,"order_id"=?,"product_id"=?,"quantity"=?,"status"=?,"updated_at"=? where "negotiation_id"=?
-Hibernate: update "orders" set "buyer_confirmed_at"=?,"order_date"=?,"seller_confirmed_at"=?,"status"=? where "order_id"=?
-Hibernate: select count(*) from "orders" oe1_0
+2026-09-01T11:05:21.367+10:00  INFO 87090 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-09-01T11:05:21.381+10:00  INFO 87090 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-01T11:05:21.542+10:00  INFO 87090 --- [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-09-01T11:05:21.945+10:00  INFO 87090 --- [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-09-01T11:05:21.945+10:00  INFO 87090 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-09-01T11:05:21.945+10:00  INFO 87090 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-09-01T11:05:21.955+10:00  INFO 87090 --- [           main] com.marketplace.SellerFlowTest           : Started SellerFlowTest in 1.555 seconds (process running for 1.927)
+seeded: sellers=5 buyers=3 products=25
 ]]></system-out>
+    <system-err><![CDATA[Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically (/Users/huydinh/.m2/repository/net/bytebuddy/byte-buddy-agent/1.17.6/byte-buddy-agent-1.17.6.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
   </testcase>
-  <testcase name="missingNegotiation_notFound" classname="com.marketplace.OrderServiceTest" time="0.001">
-    <system-out><![CDATA[Hibernate: select ne1_0."negotiation_id",ne1_0."current_price",ne1_0."current_round",ne1_0."date",ne1_0."final_price",ne1_0."last_actor",ne1_0."national_id",ne1_0."order_id",ne1_0."product_id",ne1_0."quantity",ne1_0."status",ne1_0."updated_at" from "negotiations" ne1_0 where ne1_0."negotiation_id"=?
-]]></system-out>
-  </testcase>
-  <testcase name="repeatSameSide_isIdempotent" classname="com.marketplace.OrderServiceTest" time="0.003">
-    <system-out><![CDATA[Hibernate: select ne1_0."negotiation_id",ne1_0."current_price",ne1_0."current_round",ne1_0."date",ne1_0."final_price",ne1_0."last_actor",ne1_0."national_id",ne1_0."order_id",ne1_0."product_id",ne1_0."quantity",ne1_0."status",ne1_0."updated_at" from "negotiations" ne1_0 where ne1_0."negotiation_id"=?
-Hibernate: select oe1_0."order_id",oe1_0."buyer_confirmed_at",oe1_0."order_date",oe1_0."seller_confirmed_at",oe1_0."status" from "orders" oe1_0 where oe1_0."order_id"=?
-Hibernate: insert into "negotiations" ("current_price","current_round","date","final_price","last_actor","national_id","order_id","product_id","quantity","status","updated_at","negotiation_id") values (?,?,?,?,?,?,?,?,?,?,?,?)
-Hibernate: insert into "orders" ("buyer_confirmed_at","order_date","seller_confirmed_at","status","order_id") values (?,?,?,?,?)
-Hibernate: update "negotiations" set "current_price"=?,"current_round"=?,"date"=?,"final_price"=?,"last_actor"=?,"national_id"=?,"order_id"=?,"product_id"=?,"quantity"=?,"status"=?,"updated_at"=? where "negotiation_id"=?
-Hibernate: update "orders" set "buyer_confirmed_at"=?,"order_date"=?,"seller_confirmed_at"=?,"status"=? where "order_id"=?
-Hibernate: select count(*) from "orders" oe1_0
-]]></system-out>
-  </testcase>
-  <testcase name="rejectedNegotiation_isClosed" classname="com.marketplace.OrderServiceTest" time="0.001">
-    <system-out><![CDATA[Hibernate: select ne1_0."negotiation_id",ne1_0."current_price",ne1_0."current_round",ne1_0."date",ne1_0."final_price",ne1_0."last_actor",ne1_0."national_id",ne1_0."order_id",ne1_0."product_id",ne1_0."quantity",ne1_0."status",ne1_0."updated_at" from "negotiations" ne1_0 where ne1_0."negotiation_id"=?
-]]></system-out>
-  </testcase>
-  <testcase name="firstBuyerConfirm_createsPendingOrder" classname="com.marketplace.OrderServiceTest" time="0.001">
-    <system-out><![CDATA[Hibernate: select ne1_0."negotiation_id",ne1_0."current_price",ne1_0."current_round",ne1_0."date",ne1_0."final_price",ne1_0."last_actor",ne1_0."national_id",ne1_0."order_id",ne1_0."product_id",ne1_0."quantity",ne1_0."status",ne1_0."updated_at" from "negotiations" ne1_0 where ne1_0."negotiation_id"=?
-Hibernate: select oe1_0."order_id",oe1_0."buyer_confirmed_at",oe1_0."order_date",oe1_0."seller_confirmed_at",oe1_0."status" from "orders" oe1_0 where oe1_0."order_id"=?
-]]></system-out>
-  </testcase>
+  <testcase name="sellerToolsSeeIncomingOffersScopedToTheSeller" classname="com.marketplace.SellerFlowTest" time="0.016"/>
+  <testcase name="browserMode_buyerOffer_leavesItWaitingForTheSeller" classname="com.marketplace.SellerFlowTest" time="0.009"/>
 </testsuite>

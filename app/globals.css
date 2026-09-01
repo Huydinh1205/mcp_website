@@ -93,3 +93,11 @@ button:disabled { opacity: 0.5; cursor: default; }
   background: #fffef7;
 }
 .modal h3 { margin: 0 0 6px; }
+
+.best { padding: 4px 0; border-top: 1px dashed #eee; }
+.takeover { margin: 4px 0 10px; font-size: 12px; }
+.takeover__toggle { color: #666; }
+.takeover__body { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+.takeover__body input { width: 90px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; }
+.takeover__body button { margin-top: 0; padding: 4px 10px; font-size: 12px; }
+.takeover__msg { color: #1a7f37; }

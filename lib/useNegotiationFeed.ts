@@ -14,6 +14,8 @@ export interface FeedRound {
 
 export interface LiveNegotiation {
   negotiationId: string;
+  productId: string;
+  name: string;
   status: string;
   lastActor: string | null;
   currentRound: number;
@@ -22,6 +24,8 @@ export interface LiveNegotiation {
   history: FeedRound[];
 }
 
+export type FeedScope = { buyer: string } | { seller: string } | null;
+
 function mergeHistory(existing: FeedRound[], tail: FeedRound[]): FeedRound[] {
   const byNumber = new Map(existing.map((r) => [r.roundNumber, r]));
   for (const r of tail) byNumber.set(r.roundNumber, r);
@@ -29,27 +33,28 @@ function mergeHistory(existing: FeedRound[], tail: FeedRound[]): FeedRound[] {
 }
 
 export function useNegotiationFeed(
-  buyerId: string | null,
+  scope: FeedScope,
   intervalMs = 1500,
 ): LiveNegotiation[] {
   const [map, setMap] = useState<Record<string, LiveNegotiation>>({});
   const cursor = useRef("");
+  const key = scope ? JSON.stringify(scope) : "";
 
   useEffect(() => {
-    if (!buyerId) return;
+    if (!scope) return;
     setMap({});
     cursor.current = "";
     let active = true;
 
+    const qs =
+      "buyer" in scope
+        ? `&buyer=${encodeURIComponent(scope.buyer)}`
+        : `&seller=${encodeURIComponent(scope.seller)}`;
+
     const tick = async () => {
       try {
-        // "__all__" = every negotiation (seller dashboard until US2 scoping).
-        const scope =
-          buyerId === "__all__"
-            ? ""
-            : `&buyer=${encodeURIComponent(buyerId)}`;
         const res = await fetch(
-          `${API_BASE}/api/negotiations?since=${encodeURIComponent(cursor.current)}${scope}`,
+          `${API_BASE}/api/negotiations?since=${encodeURIComponent(cursor.current)}${qs}`,
         );
         const data = await res.json();
         cursor.current = data.cursor ?? cursor.current;
@@ -60,6 +65,8 @@ export function useNegotiationFeed(
             const existing = next[n.negotiationId];
             next[n.negotiationId] = {
               negotiationId: n.negotiationId,
+              productId: n.productId ?? "",
+              name: n.name ?? n.negotiationId.slice(0, 8),
               status: n.status,
               lastActor: n.lastActor,
               currentRound: n.currentRound,
@@ -81,7 +88,19 @@ export function useNegotiationFeed(
       active = false;
       clearInterval(id);
     };
-  }, [buyerId, intervalMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, intervalMs]);
 
   return Object.values(map).sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+/** US4: for each product, the negotiation with the lowest current price. */
+export function bestPerProduct(negotiations: LiveNegotiation[]): LiveNegotiation[] {
+  const best = new Map<string, LiveNegotiation>();
+  for (const n of negotiations) {
+    const key = n.name || n.productId;
+    const cur = best.get(key);
+    if (!cur || n.currentPrice < cur.currentPrice) best.set(key, n);
+  }
+  return [...best.values()];
 }

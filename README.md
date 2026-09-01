@@ -44,9 +44,8 @@ export SPRING_DATASOURCE_URL="jdbc:sqlserver://localhost:1433;databaseName=marke
 export SPRING_DATASOURCE_USERNAME=sa
 export SPRING_DATASOURCE_PASSWORD='Your_strong_Passw0rd'
 export OPENAI_API_KEY=sk-...
-./mvnw spring-boot:run        # or: mvn spring-boot:run   → http://localhost:8080
+./mvnw spring-boot:run        # → http://localhost:8080  (mvnw downloads Maven on first run)
 ```
-(No `mvnw` yet — use a local Maven: `mvn spring-boot:run`.)
 
 ### 3. Frontend
 
@@ -61,18 +60,23 @@ npm run dev                           # http://localhost:3000
 - **Buyer** (`/`): pick a buyer, keep or edit the goal, **Start agent**. The agent
   searches, offers, and counters against the server-side seller. When it accepts,
   a **Confirm** button appears — click it to place the order.
-- **Seller dashboard** (`/dashboard`): read-only view of incoming negotiations
-  (live seller agent is US2).
+- **Seller dashboard** (`/dashboard`): pick a seller, **Run agent** (or toggle
+  **Auto-respond**). The seller agent handles incoming offers via its own WebMCP
+  tools; when it accepts, the seller confirms here.
 
-`SELLER_MODE=server` (default) runs the seller heuristic server-side (US1).
-`browser` (US2/US3) is not wired yet.
+**`SELLER_MODE`** (backend env):
+- `server` (default) — the seller side is a deterministic server-side responder (US1). The buyer flow works in one window.
+- `browser` — the seller side is a live WebMCP agent you run from `/dashboard` (US2/US3). Open two Chrome windows: buyer on `/`, seller on `/dashboard`, start both agents. Each human confirms their side.
+
+US4 (compare sellers): give the buyer agent a goal like "compare every seller" — it opens one negotiation per seller and the buyer page shows a *best offer per product* panel.
+US5 (manual takeover): every negotiation card has a **Take over** toggle to counter / accept / reject by hand through the same tools.
 
 ## Tests
 
 | where | command | count |
 |-------|---------|-------|
-| backend | `cd backend && mvn test` | **36** — state machine (12), tokens (5), feed (5), optimistic write (5), two-sided confirm (5), full boot + API + server-seller e2e (4) |
-| frontend | `npm test` | **14** — agent harness incl. unknown-tool abort (5), persona prompts (9) |
+| backend | `cd backend && mvn test` | **39** — state machine (12), tokens (5), feed (5), optimistic write (5), two-sided confirm (5), `@SpringBootTest` boot + REST + server-seller e2e (4), browser-seller / seller-scoping / two-sided-confirm (3) |
+| frontend | `npm test` | **16** — agent harness incl. unknown-tool abort (5), persona prompts (9), best-offer helper (2) |
 | frontend | `npm run build` | production build |
 
 All core logic was built test-first (see the design doc + git history).
@@ -98,9 +102,6 @@ Chrome (buyer page)
                                      needs BOTH buyer + seller confirmation
 ```
 
-## Not yet built
+## Status
 
-US2 (live seller WebMCP agent — `seller-tools.ts`, seller browser loop,
-`SELLER_MODE=browser` UI), US3 (two-window flow, seller human confirm), US4
-(compare sellers), US5 (manual takeover), the Playwright two-window E2E.
-See `specs/001-agent-negotiation-marketplace/tasks.md`.
+US1–US5 are implemented. Still open: the Playwright two-window E2E (`e2e/two-window.spec.ts` is a stub), a persona eval, unit coverage for the browser harness edge branches, and the 9 non-demo ERD tables (`TODOS.md`).

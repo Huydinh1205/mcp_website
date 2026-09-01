@@ -11,6 +11,8 @@ public class FeedService {
 
   public record FeedRow(
       String negotiationId,
+      String productId,
+      String name,
       String status,
       String lastActor,
       int currentRound,
@@ -20,6 +22,8 @@ public class FeedService {
 
   public record FeedNegotiation(
       String negotiationId,
+      String productId,
+      String name,
       String status,
       String lastActor,
       int currentRound,
@@ -44,8 +48,8 @@ public class FeedService {
     List<FeedNegotiation> changed = rows.stream()
         .filter(r -> r.updatedAt() > fCutoff)
         .map(r -> new FeedNegotiation(
-            r.negotiationId(), r.status(), r.lastActor(), r.currentRound(),
-            r.currentPrice(), r.updatedAt(), r.rounds()))
+            r.negotiationId(), r.productId(), r.name(), r.status(), r.lastActor(),
+            r.currentRound(), r.currentPrice(), r.updatedAt(), r.rounds()))
         .toList();
 
     long max = rows.stream().mapToLong(FeedRow::updatedAt).max().orElse(Long.MIN_VALUE);

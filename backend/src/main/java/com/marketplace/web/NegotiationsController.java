@@ -20,7 +20,8 @@ public class NegotiationsController {
   @GetMapping("/api/negotiations")
   public FeedService.FeedResult get(
       @RequestParam(defaultValue = "") String since,
-      @RequestParam(required = false) String buyer) {
-    return feed.compute(negotiations.feedRows(buyer), since);
+      @RequestParam(required = false) String buyer,
+      @RequestParam(required = false) String seller) {
+    return feed.compute(negotiations.feedRows(buyer, seller), since);
   }
 }

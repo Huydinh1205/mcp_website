@@ -141,16 +141,26 @@ public class NegotiationService {
         .stream().findFirst();
   }
 
-  public List<FeedService.FeedRow> feedRows(String buyerIdOrNull) {
-    List<NegotiationEntity> ns =
-        buyerIdOrNull == null ? negotiations.findAll() : negotiations.findByNationalId(buyerIdOrNull);
+  public List<FeedService.FeedRow> feedRows(String buyerId, String sellerId) {
+    List<NegotiationEntity> ns;
+    if (buyerId != null) {
+      ns = negotiations.findByNationalId(buyerId);
+    } else if (sellerId != null) {
+      var productIds = products.findBySellerId(sellerId).stream().map(p -> p.productId).toList();
+      ns = productIds.isEmpty() ? List.of()
+          : negotiations.findByProductIdInAndStatusIn(productIds,
+              List.of("open", "countered", "buyer_accepted", "seller_accepted", "confirmed", "rejected"));
+    } else {
+      ns = negotiations.findAll();
+    }
     return ns.stream().map(n -> {
       var rs = rounds.findByNegotiationIdOrderByRoundNumberAsc(n.negotiationId).stream()
           .map(r -> new FeedService.FeedRound(r.roundNumber, r.author, r.proposedPrice, r.messageContext))
           .toList();
+      String name = products.findById(n.productId).map(p -> p.name).orElse("?");
       return new FeedService.FeedRow(
-          n.negotiationId, n.status, n.lastActor, n.currentRound, n.currentPrice,
-          n.updatedAt == null ? 0L : n.updatedAt.toEpochMilli(), rs);
+          n.negotiationId, n.productId, name, n.status, n.lastActor, n.currentRound,
+          n.currentPrice, n.updatedAt == null ? 0L : n.updatedAt.toEpochMilli(), rs);
     }).toList();
   }
 }

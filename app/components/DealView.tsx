@@ -11,19 +11,13 @@ const STATUS_LABEL: Record<string, string> = {
   rejected: "no deal",
 };
 
-export function DealView({
-  negotiation,
-  productName,
-}: {
-  negotiation: LiveNegotiation;
-  productName?: string;
-}) {
+export function DealView({ negotiation }: { negotiation: LiveNegotiation }) {
   const n = negotiation;
   const thinking = n.status === "countered";
   return (
     <div className="deal">
       <div className="deal__head">
-        <strong>{productName ?? n.negotiationId.slice(0, 8)}</strong>
+        <strong>{n.name}</strong>
         <span className={`pill pill--${n.status}`}>
           {STATUS_LABEL[n.status] ?? n.status}
           {thinking && n.lastActor === "buyer" ? " · seller agent thinking…" : ""}
