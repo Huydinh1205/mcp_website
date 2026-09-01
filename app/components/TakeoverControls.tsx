@@ -4,16 +4,16 @@
 // through the same WebMCP tools the agent uses (via POST /api/mcp).
 
 import { useState } from "react";
-import { API_BASE } from "@/lib/api";
+import { authedFetch } from "@/lib/auth";
 import type { LiveNegotiation } from "@/lib/useNegotiationFeed";
 
 type Side = "buyer" | "seller";
 
-async function mcp(tool: string, args: unknown, session: unknown) {
-  const res = await fetch(`${API_BASE}/api/mcp`, {
+async function mcp(tool: string, args: unknown) {
+  const res = await authedFetch("/api/mcp", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ tool, args, session }),
+    body: JSON.stringify({ tool, args }),
   });
   return res.json().catch(() => ({}));
 }
@@ -21,13 +21,11 @@ async function mcp(tool: string, args: unknown, session: unknown) {
 export function TakeoverControls({
   side,
   negotiation,
-  sessionId,
   onToken,
   onActive,
 }: {
   side: Side;
   negotiation: LiveNegotiation;
-  sessionId: string;
   onToken?: (negotiationId: string, token: string) => void;
   onActive?: (negotiationId: string, active: boolean) => void;
 }) {
@@ -39,9 +37,6 @@ export function TakeoverControls({
   const [msg, setMsg] = useState<string | null>(null);
 
   const n = negotiation;
-  const session =
-    side === "buyer" ? { buyerId: sessionId } : { sellerId: sessionId };
-
   const toggle = (v: boolean) => {
     setOpen(v);
     onActive?.(n.negotiationId, v);
@@ -50,11 +45,11 @@ export function TakeoverControls({
   const run = async (tool: string, extra: Record<string, unknown>) => {
     setBusy(true);
     setMsg(null);
-    const r = await mcp(
-      tool,
-      { negotiation_id: n.negotiationId, round_seen: n.currentRound, ...extra },
-      session,
-    );
+    const r = await mcp(tool, {
+      negotiation_id: n.negotiationId,
+      round_seen: n.currentRound,
+      ...extra,
+    });
     setBusy(false);
     if (r?.error) {
       setMsg(String(r.error));

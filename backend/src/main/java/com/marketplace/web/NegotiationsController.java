@@ -1,6 +1,7 @@
 package com.marketplace.web;
 
 import com.marketplace.FeedService;
+import com.marketplace.auth.CurrentUser;
 import com.marketplace.negotiation.NegotiationService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,11 +18,11 @@ public class NegotiationsController {
     this.feed = feed;
   }
 
+  /** Buyers see their own negotiations; sellers see negotiations for their products. */
   @GetMapping("/api/negotiations")
-  public FeedService.FeedResult get(
-      @RequestParam(defaultValue = "") String since,
-      @RequestParam(required = false) String buyer,
-      @RequestParam(required = false) String seller) {
+  public FeedService.FeedResult get(@RequestParam(defaultValue = "") String since) {
+    String buyer = CurrentUser.isBuyer() ? CurrentUser.id() : null;
+    String seller = CurrentUser.isSeller() ? CurrentUser.id() : null;
     return feed.compute(negotiations.feedRows(buyer, seller), since);
   }
 }

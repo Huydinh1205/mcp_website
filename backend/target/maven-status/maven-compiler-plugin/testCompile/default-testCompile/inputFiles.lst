@@ -1,7 +1,12 @@
+/Users/huydinh/Desktop/Projects/mcp_website/backend/src/test/java/com/marketplace/AuthTest.java
+/Users/huydinh/Desktop/Projects/mcp_website/backend/src/test/java/com/marketplace/CatalogAndDealsTest.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/test/java/com/marketplace/ContextAndApiTest.java
+/Users/huydinh/Desktop/Projects/mcp_website/backend/src/test/java/com/marketplace/DiscountServiceTest.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/test/java/com/marketplace/FeedServiceTest.java
+/Users/huydinh/Desktop/Projects/mcp_website/backend/src/test/java/com/marketplace/IdorGuardsTest.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/test/java/com/marketplace/NegotiationServiceTest.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/test/java/com/marketplace/OrderServiceTest.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/test/java/com/marketplace/SellerFlowTest.java
+/Users/huydinh/Desktop/Projects/mcp_website/backend/src/test/java/com/marketplace/TestAuth.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/test/java/com/marketplace/TokenServiceTest.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/test/java/com/marketplace/negotiation/OffersServiceTest.java

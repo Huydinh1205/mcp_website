@@ -8,4 +8,6 @@ public class UserEntity {
   @Column(name = "first_name") public String firstName;
   @Column(name = "last_name") public String lastName;
   @Column public String email;
+  @Column public String role;                          // "buyer" | "seller"
+  @Column(name = "password_hash") public String passwordHash;
 }

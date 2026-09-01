@@ -11,6 +11,8 @@ public class NegotiationEntity {
   @Column(name = "current_round") public int currentRound;
   @Column(name = "current_price") public double currentPrice;
   @Column public int quantity = 1;
+  @Column(name = "current_freebies_cost") public double currentFreebiesCost = 0;
+  @Column(name = "current_free_shipping") public boolean currentFreeShipping = false;
   @Column public Instant date = Instant.now();
   @Column(name = "final_price") public Double finalPrice;
   @Column(name = "updated_at") public Instant updatedAt = Instant.now();

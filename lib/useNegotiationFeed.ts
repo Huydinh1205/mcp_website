@@ -3,7 +3,7 @@
 // Polls GET /api/negotiations and merges the deltas into a live map (D-A3).
 
 import { useEffect, useRef, useState } from "react";
-import { API_BASE } from "@/lib/api";
+import { authedFetch } from "@/lib/auth";
 
 export interface FeedRound {
   roundNumber: number;
@@ -16,6 +16,9 @@ export interface LiveNegotiation {
   negotiationId: string;
   productId: string;
   name: string;
+  quantity: number;
+  freebiesCost: number;
+  freeShipping: boolean;
   status: string;
   lastActor: string | null;
   currentRound: number;
@@ -24,7 +27,7 @@ export interface LiveNegotiation {
   history: FeedRound[];
 }
 
-export type FeedScope = { buyer: string } | { seller: string } | null;
+export type FeedScope = "buyer" | "seller" | null;
 
 function mergeHistory(existing: FeedRound[], tail: FeedRound[]): FeedRound[] {
   const byNumber = new Map(existing.map((r) => [r.roundNumber, r]));
@@ -38,7 +41,7 @@ export function useNegotiationFeed(
 ): LiveNegotiation[] {
   const [map, setMap] = useState<Record<string, LiveNegotiation>>({});
   const cursor = useRef("");
-  const key = scope ? JSON.stringify(scope) : "";
+  const key = scope ?? "";
 
   useEffect(() => {
     if (!scope) return;
@@ -46,15 +49,10 @@ export function useNegotiationFeed(
     cursor.current = "";
     let active = true;
 
-    const qs =
-      "buyer" in scope
-        ? `&buyer=${encodeURIComponent(scope.buyer)}`
-        : `&seller=${encodeURIComponent(scope.seller)}`;
-
     const tick = async () => {
       try {
-        const res = await fetch(
-          `${API_BASE}/api/negotiations?since=${encodeURIComponent(cursor.current)}${qs}`,
+        const res = await authedFetch(
+          `/api/negotiations?since=${encodeURIComponent(cursor.current)}`,
         );
         const data = await res.json();
         cursor.current = data.cursor ?? cursor.current;
@@ -67,6 +65,9 @@ export function useNegotiationFeed(
               negotiationId: n.negotiationId,
               productId: n.productId ?? "",
               name: n.name ?? n.negotiationId.slice(0, 8),
+              quantity: n.quantity ?? 1,
+              freebiesCost: n.freebiesCost ?? 0,
+              freeShipping: !!n.freeShipping,
               status: n.status,
               lastActor: n.lastActor,
               currentRound: n.currentRound,

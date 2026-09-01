@@ -19,10 +19,12 @@ public class OrderService {
 
   private final NegotiationRepo negotiations;
   private final OrderRepo orders;
+  private final DiscountService discounts;
 
-  public OrderService(NegotiationRepo negotiations, OrderRepo orders) {
+  public OrderService(NegotiationRepo negotiations, OrderRepo orders, DiscountService discounts) {
     this.negotiations = negotiations;
     this.orders = orders;
+    this.discounts = discounts;
   }
 
   public record ConfirmResult(
@@ -61,7 +63,8 @@ public class OrderService {
     if (both && !"confirmed".equals(order.status)) {
       order.status = "confirmed";
       n.status = "confirmed";
-      n.finalPrice = n.currentPrice;
+      double coupon = discounts.totalDiscountFor(negotiationId, n.currentPrice);
+      n.finalPrice = Math.round((n.currentPrice - coupon) * 100.0) / 100.0;
       negotiations.save(n);
     }
     orders.save(order);

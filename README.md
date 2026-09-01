@@ -13,7 +13,7 @@ works without it — the harness falls back to its own tool registry.
 | Path | Stack | Role |
 |------|-------|------|
 | `backend/` | Java 21 · Spring Boot 3.5 · JPA/Hibernate · Flyway · **Microsoft SQL Server** | negotiation state machine, REST API, OpenAI proxy, server-side seller agent |
-| `app/`, `lib/` | Next.js 15 · React 19 · TypeScript | WebMCP tool layer, browser agent loop, UI |
+| `app/`, `lib/` | Next.js 15 · React 19 · TypeScript | WebMCP tool layer, browser agent loop, catalog + negotiation UI |
 
 The agent loop and WebMCP tool registration **must** be browser TypeScript
 (WebMCP is a browser API); everything else is the Java backend.
@@ -68,14 +68,18 @@ npm run dev                           # http://localhost:3000
 - `server` (default) — the seller side is a deterministic server-side responder (US1). The buyer flow works in one window.
 - `browser` — the seller side is a live WebMCP agent you run from `/dashboard` (US2/US3). Open two Chrome windows: buyer on `/`, seller on `/dashboard`, start both agents. Each human confirms their side.
 
-US4 (compare sellers): give the buyer agent a goal like "compare every seller" — it opens one negotiation per seller and the buyer page shows a *best offer per product* panel.
-US5 (manual takeover): every negotiation card has a **Take over** toggle to counter / accept / reject by hand through the same tools.
+**Catalog** (`/catalog`): human search / category + price + rating filters; a product page (`/product/:id`) lists every seller + reviews, and "Send agent to negotiate" deep-links the buyer page.
+
+**Deals are multi-term, not just a price.** Every offer/counter is a package: `price + quantity + freebies + free shipping`. `applyTurn` only enforces two hard limits — buyer total ≤ budget, seller NET (price − freebies − shipping given) ≥ floor — the rest (which freebie? B1G1?) is agent judgment. Plus seller **coupons** (`list_coupons` / `apply_coupon`, applied at checkout) and post-purchase **reviews**.
+
+US4 (compare sellers): buyer goal "compare every seller" → one negotiation per seller + a *best offer per product* panel.
+US5 (manual takeover): every negotiation card has a **Take over** toggle.
 
 ## Tests
 
 | where | command | count |
 |-------|---------|-------|
-| backend | `cd backend && mvn test` | **39** — state machine (12), tokens (5), feed (5), optimistic write (5), two-sided confirm (5), `@SpringBootTest` boot + REST + server-seller e2e (4), browser-seller / seller-scoping / two-sided-confirm (3) |
+| backend | `cd backend && ./mvnw test` | **55** — state machine incl. multi-term deals (17), coupons (5), tokens (5), feed (5), optimistic write (5), two-sided confirm (5), `@SpringBootTest`: boot+REST+server-seller (4), browser-seller+scoping (3), catalog+deals+coupons+reviews (6) |
 | frontend | `npm test` | **16** — agent harness incl. unknown-tool abort (5), persona prompts (9), best-offer helper (2) |
 | frontend | `npm run build` | production build |
 
@@ -104,4 +108,4 @@ Chrome (buyer page)
 
 ## Status
 
-US1–US5 are implemented. Still open: the Playwright two-window E2E (`e2e/two-window.spec.ts` is a stub), a persona eval, unit coverage for the browser harness edge branches, and the 9 non-demo ERD tables (`TODOS.md`).
+US1–US5 + a human catalog (search/filter/product page/reviews) + multi-term deals + seller coupons are implemented and tested (55 backend, 16 frontend). Still open: Playwright two-window E2E (stub), a persona eval, and the remaining ERD tables not on the demo path — Delivery, Invoice, Payment_method, Contain (checkout/fulfilment). `Discount`, `Feedback`, and product `category` are now built.

@@ -10,4 +10,5 @@ public class NegotiationRoundEntity {
   @Column(name = "proposed_price") public double proposedPrice;
   @Column(name = "message_context") public String messageContext;
   @Column public String author;
+  @Column(length = 4000) public String terms;
 }

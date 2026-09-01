@@ -14,7 +14,11 @@ import org.springframework.stereotype.Service;
  * (Constitution IV). Pure: takes a snapshot, returns the intended outcome or a
  * typed error. Persistence + the optimistic write live in NegotiationService.
  *
- * Port of lib/offers.ts. Rule ordering mirrors data-model.md "Transition rules".
+ * A turn may carry multi-term deal content (price + quantity + freebies + free
+ * shipping) via TurnInput.terms(). Only two hard economic limits are enforced —
+ * buyer deal total <= budget, seller NET (price minus freebies given minus
+ * shipping given) >= floor. Everything else (which freebie? B1G1 or not?) is
+ * agent judgment, which is the point of using an agent.
  */
 @Service
 public class OffersService {
@@ -24,6 +28,7 @@ public class OffersService {
   public TurnResult applyTurn(NegotiationSnapshot s, TurnInput in) {
     Side actor = in.actor();
     TurnAction action = in.action();
+    DealTerms terms = in.terms();
 
     // 1. Frozen once finished, or once a side accepted and it awaits human confirms.
     if (s.status() == CONFIRMED
@@ -51,14 +56,28 @@ public class OffersService {
           REJECTED, actor, s.currentRound(), s.currentPrice(), true, false, null, null));
     }
 
-    // 5. Price bounds — before the round cap (buyer ceiling / seller floor first).
+    // 5. Economic bounds — before the round cap.
+    //    priceOnTable = the deal total for this turn.
     double priceOnTable =
-        action == ACCEPT ? s.currentPrice() : (in.price() == null ? Double.NaN : in.price());
+        action == ACCEPT
+            ? s.currentPrice()
+            : terms != null ? terms.price()
+            : (in.price() == null ? Double.NaN : in.price());
+
+    // What the seller gives away this turn (or, on accept, what is on the table).
+    double freebiesGiven =
+        action == ACCEPT ? s.currentFreebiesCost()
+            : terms != null ? terms.freebiesCost()
+            : 0.0;
+    boolean shipGiven =
+        action == ACCEPT ? s.currentFreeShipping()
+            : terms != null && terms.freeShipping();
+    double sellerNet = priceOnTable - freebiesGiven - (shipGiven ? s.shippingCost() : 0.0);
 
     if (actor == BUYER && priceOnTable > s.maxBudget()) {
       return err(OVER_BUDGET);
     }
-    if (actor == SELLER && priceOnTable < s.minPrice()) {
+    if (actor == SELLER && sellerNet < s.minPrice()) {
       return err(BELOW_FLOOR);
     }
     if (actor == SELLER
@@ -74,7 +93,7 @@ public class OffersService {
           REJECTED, actor, s.currentRound(), s.currentPrice(), true, false, null, "round_cap"));
     }
 
-    // 7. Accept — locks the price into a pending deal; never places an order.
+    // 7. Accept — locks the deal into a pending state; never places an order.
     if (action == ACCEPT) {
       return ok(new TurnOutcome(
           actor == BUYER ? BUYER_ACCEPTED : SELLER_ACCEPTED,
@@ -87,12 +106,13 @@ public class OffersService {
           null));
     }
 
-    // 8. offer / counter — advance one round.
+    // 8. offer / counter — advance one round, carrying the deal terms.
     String verb = action == OFFER ? "offers" : "counters at";
+    String extra = terms == null ? "" : dealSuffix(terms);
     String message =
         in.message() != null
             ? in.message()
-            : "%s %s %s".formatted(actor.wire(), verb, trimNum(priceOnTable));
+            : "%s %s %s%s".formatted(actor.wire(), verb, trimNum(priceOnTable), extra);
     return ok(new TurnOutcome(
         COUNTERED,
         actor,
@@ -100,8 +120,18 @@ public class OffersService {
         priceOnTable,
         false,
         false,
-        new TurnOutcome.AppendRound(actor, priceOnTable, message),
+        new TurnOutcome.AppendRound(actor, priceOnTable, message, terms),
         null));
+  }
+
+  private static String dealSuffix(DealTerms t) {
+    StringBuilder b = new StringBuilder();
+    if (t.quantity() > 1) b.append(" x").append(t.quantity());
+    if (t.freebies() != null && !t.freebies().isEmpty()) {
+      b.append(" + ").append(t.freebies().size()).append(" free item(s)");
+    }
+    if (t.freeShipping()) b.append(" + free shipping");
+    return b.toString();
   }
 
   private static String trimNum(double n) {

@@ -5,6 +5,7 @@ import com.marketplace.TokenService;
 import com.marketplace.db.*;
 import java.util.List;
 import java.util.Optional;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class NegotiationService {
   private final BuyerConfigRepo buyerConfigs;
   private final OffersService offers;
   private final TokenService tokens;
+  private final ObjectMapper json = new ObjectMapper();
 
   public NegotiationService(
       NegotiationRepo negotiations,
@@ -86,7 +88,10 @@ public class NegotiationService {
         bConf != null ? bConf.maxBudget : Double.POSITIVE_INFINITY,
         product.minPrice,
         sConf != null ? sConf.maxDiscountStep : Double.POSITIVE_INFINITY,
-        lastSeller);
+        lastSeller,
+        product.shippingCost,
+        n.currentFreebiesCost,
+        n.currentFreeShipping);
   }
 
   @Transactional
@@ -98,6 +103,12 @@ public class NegotiationService {
     if (r instanceof TurnResult.Err e) return CommitResult.err(e.error());
     TurnOutcome o = ((TurnResult.Ok) r).value();
 
+    com.marketplace.negotiation.DealTerms t =
+        o.appendRound() != null ? o.appendRound().terms() : null;
+    double freebiesCost = t != null ? t.freebiesCost() : 0.0;
+    boolean freeShip = t != null && t.freeShipping();
+    int qty = t != null && t.quantity() > 0 ? t.quantity() : 1;
+
     int written = negotiations.applyTurn(
         negotiationId,
         java.time.Instant.now(),
@@ -105,7 +116,10 @@ public class NegotiationService {
         o.nextStatus().wire(),
         o.nextLastActor().wire(),
         o.nextRound(),
-        o.nextPrice());
+        o.nextPrice(),
+        freebiesCost,
+        freeShip,
+        qty);
     if (written == 0) return CommitResult.err(TurnErrorCode.STALE);
 
     if (o.appendRound() != null) {
@@ -115,12 +129,27 @@ public class NegotiationService {
       nr.proposedPrice = o.appendRound().proposedPrice();
       nr.messageContext = o.appendRound().message();
       nr.author = o.appendRound().author().wire();
+      if (t != null) {
+        try { nr.terms = json.writeValueAsString(t); } catch (Exception ignored) {}
+      }
       rounds.save(nr);
     }
 
     String token =
         o.requiresHumanConfirmation() ? tokens.mint(negotiationId, input.actor()) : null;
     return CommitResult.ok(o.nextStatus(), o.requiresHumanConfirmation(), token);
+  }
+
+  /** Ownership guards — IDOR protection for negotiation_id inputs. */
+  public boolean buyerOwns(String negotiationId, String buyerId) {
+    return negotiations.findById(negotiationId)
+        .map(n -> buyerId != null && buyerId.equals(n.nationalId)).orElse(false);
+  }
+
+  public boolean sellerOwns(String negotiationId, String sellerId) {
+    var n = negotiations.findById(negotiationId).orElse(null);
+    if (n == null || sellerId == null) return false;
+    return products.findById(n.productId).map(p -> sellerId.equals(p.sellerId)).orElse(false);
   }
 
   // --- reads for the WebMCP tools / feed -------------------------------------
@@ -159,7 +188,8 @@ public class NegotiationService {
           .toList();
       String name = products.findById(n.productId).map(p -> p.name).orElse("?");
       return new FeedService.FeedRow(
-          n.negotiationId, n.productId, name, n.status, n.lastActor, n.currentRound,
+          n.negotiationId, n.productId, name, n.quantity, n.currentFreebiesCost,
+          n.currentFreeShipping, n.status, n.lastActor, n.currentRound,
           n.currentPrice, n.updatedAt == null ? 0L : n.updatedAt.toEpochMilli(), rs);
     }).toList();
   }

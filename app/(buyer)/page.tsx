@@ -1,35 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { runAgentLoop, type LoopEvent } from "@/lib/agent-loop";
 import { browserLlmTurn } from "@/lib/browserLlm";
 import { buildBuyerRegistry } from "@/lib/webmcp/buyer-tools";
 import { buildSystemPrompt } from "@/lib/personas";
 import { useNegotiationFeed, bestPerProduct } from "@/lib/useNegotiationFeed";
+import { useAuth } from "@/lib/auth";
 import { DealView } from "@/app/components/DealView";
 import { ConfirmModal } from "@/app/components/ConfirmModal";
 import { TakeoverControls } from "@/app/components/TakeoverControls";
-import { API_BASE } from "@/lib/api";
-
-interface BuyerOption {
-  id: string;
-  name: string;
-  interest: string | null;
-  config: {
-    maxBudget: number;
-    targetPrice: number;
-    minSellerRating: number;
-    style: string;
-  } | null;
-}
+import { ReviewForm } from "@/app/components/ReviewForm";
 
 const ACCEPTED = new Set(["buyer_accepted", "seller_accepted"]);
 
+// Sensible defaults for a registered buyer (backend BuyerAiConfig defaults match).
+const CFG = { maxBudget: 200, targetPrice: 120, minSellerRating: 0, style: "fair" };
+
 export default function BuyerPage() {
-  const [buyers, setBuyers] = useState<BuyerOption[]>([]);
-  const [buyerId, setBuyerId] = useState<string | null>(null);
+  const user = useAuth();
+  const router = useRouter();
   const [goal, setGoal] = useState(
-    "Find me a 65% Mechanical Keyboard. Compare every seller that has one and get the best price.",
+    "Find me a 65% Mechanical Keyboard. Compare every seller and get the best total deal — use quantity, free add-ons, free shipping and coupons where they help.",
   );
   const [running, setRunning] = useState(false);
   const [events, setEvents] = useState<LoopEvent[]>([]);
@@ -37,25 +30,21 @@ export default function BuyerPage() {
   const [placed, setPlaced] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/buyers`)
-      .then((r) => r.json())
-      .then((data: BuyerOption[]) => {
-        setBuyers(data);
-        if (data[0]) setBuyerId(data[0].id);
-      })
-      .catch(() => setBuyers([]));
+    const qGoal = new URLSearchParams(window.location.search).get("goal");
+    if (qGoal) setGoal(qGoal);
   }, []);
 
-  const buyer = useMemo(
-    () => buyers.find((b) => b.id === buyerId) ?? null,
-    [buyers, buyerId],
-  );
+  useEffect(() => {
+    if (user === null) return; // still loading
+    if (!user || user.role !== "buyer") router.replace("/login?next=/");
+  }, [user, router]);
 
-  const negotiations = useNegotiationFeed(buyerId ? { buyer: buyerId } : null);
+  const negotiations = useNegotiationFeed(user?.role === "buyer" ? "buyer" : null);
   const best = useMemo(() => bestPerProduct(negotiations), [negotiations]);
   const multiSeller = negotiations.length > best.length;
 
-  const captureToken = (e: LoopEvent) => {
+  const onEvent = (e: LoopEvent) => {
+    setEvents((prev) => [...prev, e]);
     if (
       e.type === "tool_result" &&
       (e.name === "accept_offer" || e.name === "respond_to_offer") &&
@@ -65,59 +54,39 @@ export default function BuyerPage() {
       "negotiation_id" in e.result
     ) {
       const r = e.result as { negotiation_id: string; confirm_token: string };
-      if (r.confirm_token) {
-        setTokens((prev) => ({ ...prev, [r.negotiation_id]: r.confirm_token }));
-      }
+      if (r.confirm_token) setTokens((p) => ({ ...p, [r.negotiation_id]: r.confirm_token }));
     }
   };
 
   const start = async () => {
-    if (!buyer?.config || running) return;
+    if (running || user?.role !== "buyer") return;
     setRunning(true);
     setEvents([]);
     try {
       await runAgentLoop({
-        systemPrompt: buildSystemPrompt({
-          role: "buyer",
-          maxBudget: buyer.config.maxBudget,
-          targetPrice: buyer.config.targetPrice,
-          minSellerRating: buyer.config.minSellerRating,
-          style: buyer.config.style,
-        }),
+        systemPrompt: buildSystemPrompt({ role: "buyer", ...CFG }),
         goal,
-        registry: buildBuyerRegistry({ buyerId: buyer.id }),
+        registry: buildBuyerRegistry(),
         llmTurn: browserLlmTurn,
         maxSteps: 16,
-        onEvent: (e) => {
-          setEvents((prev) => [...prev, e]);
-          captureToken(e);
-        },
+        onEvent,
       });
     } finally {
       setRunning(false);
     }
   };
 
+  if (!user || user.role !== "buyer") {
+    return <main className="wrap"><p className="muted">Redirecting to login…</p></main>;
+  }
+
   return (
     <main className="wrap">
-      <h1>Buyer</h1>
+      <h1>Buyer — {user.name}</h1>
 
       <section className="panel">
-        <label>
-          Acting as{" "}
-          <select value={buyerId ?? ""} onChange={(e) => setBuyerId(e.target.value)}>
-            {buyers.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-                {b.config
-                  ? ` (budget ${b.config.maxBudget}, target ${b.config.targetPrice}, ${b.config.style})`
-                  : ""}
-              </option>
-            ))}
-          </select>
-        </label>
-        <textarea value={goal} onChange={(e) => setGoal(e.target.value)} rows={2} />
-        <button onClick={start} disabled={running || !buyer?.config}>
+        <textarea value={goal} onChange={(e) => setGoal(e.target.value)} rows={3} />
+        <button onClick={start} disabled={running}>
           {running ? "Agent running…" : "Start agent"}
         </button>
       </section>
@@ -137,33 +106,31 @@ export default function BuyerPage() {
       <section className="panel">
         <h2>Negotiations</h2>
         {negotiations.length === 0 ? (
-          <p className="muted">No negotiations yet.</p>
+          <p className="muted">No negotiations yet. Start the agent, or pick a product from the Catalog.</p>
         ) : (
           negotiations.map((n) => (
             <div key={n.negotiationId}>
               <DealView negotiation={n} />
-              {buyerId ? (
-                <TakeoverControls
-                  side="buyer"
-                  negotiation={n}
-                  sessionId={buyerId}
-                  onToken={(id, t) => setTokens((p) => ({ ...p, [id]: t }))}
-                />
-              ) : null}
-              {ACCEPTED.has(n.status) &&
-              tokens[n.negotiationId] &&
-              !placed[n.negotiationId] ? (
+              <TakeoverControls
+                side="buyer"
+                negotiation={n}
+                onToken={(id, t) => setTokens((p) => ({ ...p, [id]: t }))}
+              />
+              {ACCEPTED.has(n.status) && tokens[n.negotiationId] && !placed[n.negotiationId] ? (
                 <ConfirmModal
                   title={n.name}
                   price={n.currentPrice}
                   confirmToken={tokens[n.negotiationId]}
-                  onDone={(res) =>
-                    setPlaced((prev) => ({ ...prev, [n.negotiationId]: res.status }))
-                  }
+                  onDone={(res) => setPlaced((p) => ({ ...p, [n.negotiationId]: res.status }))}
                 />
               ) : null}
               {placed[n.negotiationId] ? (
-                <p className="ok">Order {placed[n.negotiationId]} ✓</p>
+                <>
+                  <p className="ok">Order {placed[n.negotiationId]} ✓</p>
+                  {placed[n.negotiationId] === "confirmed" ? (
+                    <ReviewForm productId={n.productId} negotiationId={n.negotiationId} />
+                  ) : null}
+                </>
               ) : null}
             </div>
           ))
@@ -178,14 +145,8 @@ export default function BuyerPage() {
               <code>{e.type}</code> {"name" in e ? <b>{e.name}</b> : null}{" "}
               {"reason" in e ? <i>{e.reason}</i> : null}
               {"message" in e ? <span className="err"> {e.message}</span> : null}
-              {"args" in e ? (
-                <span className="muted"> {JSON.stringify(e.args)}</span>
-              ) : null}
               {"result" in e ? (
-                <span className="muted">
-                  {" "}
-                  {JSON.stringify(e.result).slice(0, 200)}
-                </span>
+                <span className="muted"> {JSON.stringify(e.result).slice(0, 200)}</span>
               ) : null}
             </li>
           ))}

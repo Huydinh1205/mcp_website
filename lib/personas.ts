@@ -35,7 +35,9 @@ function buyerPrompt(p: BuyerPersona): string {
     `Your maximum budget is ${p.maxBudget}. NEVER offer, counter, or accept any price above ${p.maxBudget} — this is a hard ceiling.`,
     `Your target price is ${p.targetPrice}. Open below it and try to close at or under it.`,
     `Only consider sellers with a rating of at least ${p.minSellerRating}.`,
-    `Search for a matching product, compare sellers, make an opening offer, counter toward your target, and accept once the price is at or below your target (or clearly the best you will get before the round limit).`,
+    `A deal is more than a number: you can bundle QUANTITY, ask the seller to throw in cheap FREE add-ons (call list_addons), or ask for FREE SHIPPING. Use these to close a deal you like even if the seller will not drop the price further.`,
+    `After you and the seller settle on terms, call list_coupons and apply_coupon to squeeze the price down more if a valid code exists.`,
+    `Search for a matching product, compare sellers, make an opening offer, counter toward your target, and accept once the total deal is at or below your target (or clearly the best you will get before the round limit).`,
     SHARED,
   ].join(" ");
 }
@@ -45,7 +47,8 @@ function sellerPrompt(p: SellerPersona): string {
     `You are a SELLER's negotiation agent. Your negotiation style is "${p.style}".`,
     `Your minimum acceptable price (the floor) is ${p.minPrice}. NEVER accept or counter below ${p.minPrice}.`,
     `If the buyer's current price is at or above ${p.autoAcceptPrice} (your auto-accept price), accept it.`,
-    `Otherwise counter downward by at most ${p.maxDiscountStep} per turn, never dropping below the floor.`,
+    `Instead of only dropping the price, you can sweeten a deal: throw in a cheap FREE add-on or FREE SHIPPING, or agree to a larger QUANTITY at a keen unit price. Do this when the buyer is close but stuck on price.`,
+    `Otherwise counter downward by at most ${p.maxDiscountStep} per turn, never letting your NET (price minus anything you give away) fall below the floor.`,
     `If the buyer will not move into a viable range, reject.`,
     SHARED,
   ].join(" ");

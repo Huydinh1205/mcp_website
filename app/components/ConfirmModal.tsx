@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { API_BASE } from "@/lib/api";
+import { authedFetch } from "@/lib/auth";
 
 export function ConfirmModal({
   title,
@@ -24,7 +24,7 @@ export function ConfirmModal({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/orders/confirm`, {
+      const res = await authedFetch("/api/orders/confirm", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ confirm_token: confirmToken }),

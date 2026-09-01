@@ -15,12 +15,16 @@ class OrderServiceTest {
 
   @Autowired NegotiationRepo negotiations;
   @Autowired OrderRepo orders;
+  @Autowired com.marketplace.db.DiscountRepo discountRepo;
+  @Autowired com.marketplace.db.AppliedDiscountRepo appliedRepo;
+  @Autowired com.marketplace.db.ProductRepo productRepo;
 
   OrderService svc;
 
   @BeforeEach
   void setup() {
-    svc = new OrderService(negotiations, orders);
+    svc = new OrderService(negotiations, orders,
+        new DiscountService(discountRepo, appliedRepo, productRepo));
   }
 
   NegotiationEntity seed(String id, String status, double price) {

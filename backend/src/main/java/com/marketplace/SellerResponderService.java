@@ -67,6 +67,17 @@ public class SellerResponderService {
       acceptAsSeller(negotiationId, n.currentRound);
       return;
     }
+
+    // Close a near-deal by sweetening with FREE SHIPPING instead of another price cut.
+    double gap = counter - buyerPrice;
+    if (!n.currentFreeShipping && gap <= p.shippingCost + 1
+        && buyerPrice - p.shippingCost >= minPrice) {
+      negotiationService.commitTurn(negotiationId, new TurnInput(
+          Side.SELLER, TurnAction.COUNTER, buyerPrice, n.currentRound,
+          "I'll match your " + round2(buyerPrice) + " and throw in free shipping.",
+          new com.marketplace.negotiation.DealTerms(buyerPrice, n.quantity, java.util.List.of(), 0, true)));
+      return;
+    }
     if (n.currentRound >= OffersService.ROUND_CAP && buyerPrice >= minPrice) {
       acceptAsSeller(negotiationId, n.currentRound);
       return;

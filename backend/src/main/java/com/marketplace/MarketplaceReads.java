@@ -41,18 +41,28 @@ public class MarketplaceReads {
   }
 
   public List<Map<String, Object>> searchProducts(String query, Double maxPrice, Double minRating) {
+    return searchProducts(query, maxPrice, minRating, null);
+  }
+
+  public List<Map<String, Object>> searchProducts(String query, Double maxPrice, Double minRating, String category) {
     return products.findByNameContainingIgnoreCase(query == null ? "" : query).stream()
         .filter(p -> maxPrice == null || p.price <= maxPrice)
+        .filter(p -> category == null || category.isBlank() || category.equalsIgnoreCase(p.category))
         .filter(p -> {
           if (minRating == null) return true;
           return sellers.findById(p.sellerId).map(s -> s.rating >= minRating).orElse(false);
         })
-        .map(p -> Map.<String, Object>of(
-            "product_id", p.productId,
-            "name", p.name,
-            "price", p.price,
-            "seller_name", sellerName(p.sellerId),
-            "seller_rating", sellers.findById(p.sellerId).map(s -> s.rating).orElse(0.0)))
+        .map(p -> {
+          Map<String, Object> m = new LinkedHashMap<>();
+          m.put("product_id", p.productId);
+          m.put("name", p.name);
+          m.put("price", p.price);
+          m.put("category", p.category);
+          m.put("image_url", p.imageUrl);
+          m.put("seller_name", sellerName(p.sellerId));
+          m.put("seller_rating", sellers.findById(p.sellerId).map(x -> x.rating).orElse(0.0));
+          return m;
+        })
         .limit(20)
         .toList();
   }
@@ -149,37 +159,62 @@ public class MarketplaceReads {
         "proposed_price", r.proposedPrice, "message", r.messageContext)).toList();
     Map<String, Object> m = new LinkedHashMap<>();
     m.put("negotiation_id", n.negotiationId);
+    m.put("product_id", n.productId);
     m.put("status", n.status);
     m.put("current_round", n.currentRound);
     m.put("last_actor", n.lastActor);
     m.put("current_price", n.currentPrice);
+    m.put("quantity", n.quantity);
+    m.put("current_freebies_cost", n.currentFreebiesCost);
+    m.put("current_free_shipping", n.currentFreeShipping);
     m.put("seller_response", sellerResponse);
     m.put("history", hist);
     return m;
   }
 
-  public List<Map<String, Object>> buyersDirectory() {
-    return buyers.findAll().stream().map(b -> {
-      var u = users.findById(b.nationalId).orElse(null);
-      var c = buyerConfigs.findByNationalId(b.nationalId).orElse(null);
-      Map<String, Object> m = new LinkedHashMap<>();
-      m.put("id", b.nationalId);
-      m.put("name", u != null ? u.firstName + " " + u.lastName : b.nationalId);
-      m.put("interest", b.interest);
-      m.put("config", c == null ? null : Map.of(
-          "maxBudget", c.maxBudget, "targetPrice", c.targetPrice,
-          "minSellerRating", c.minSellerRating, "style", c.style));
-      return m;
-    }).toList();
+
+
+  /** Cheap items the seller of `productId` could throw in as freebies. */
+  public List<Map<String, Object>> addonsFor(String productId) {
+    ProductEntity target = products.findById(productId).orElse(null);
+    if (target == null) return List.of();
+    return products.findBySellerId(target.sellerId).stream()
+        .filter(p -> !p.productId.equals(productId) && p.price <= 40)
+        .map(p -> Map.<String, Object>of(
+            "product_id", p.productId, "name", p.name, "value", p.minPrice))
+        .toList();
   }
 
-  public List<Map<String, Object>> sellersDirectory() {
-    return sellers.findAll().stream().map(s -> {
-      var u = users.findById(s.nationalId).orElse(null);
-      return Map.<String, Object>of(
-          "id", s.nationalId,
-          "name", u != null ? u.firstName + " " + u.lastName : s.nationalId,
-          "rating", s.rating);
-    }).toList();
+  public List<String> categories() {
+    return products.findAll().stream()
+        .map(p -> p.category).filter(c -> c != null && !c.isBlank())
+        .distinct().sorted().toList();
+  }
+
+  /** Product detail for the human catalog: every seller carrying this name + reviews. */
+  public Map<String, Object> productDetail(String productId, java.util.function.Function<String, Double> avgRating,
+      java.util.function.Function<String, List<Map<String, Object>>> reviews) {
+    ProductEntity p = products.findById(productId).orElse(null);
+    if (p == null) return null;
+    var siblings = products.findByNameContainingIgnoreCase(p.name).stream()
+        .filter(x -> x.name.equalsIgnoreCase(p.name))
+        .map(x -> Map.<String, Object>of(
+            "product_id", x.productId,
+            "seller_id", x.sellerId,
+            "seller_name", sellerName(x.sellerId),
+            "seller_rating", sellers.findById(x.sellerId).map(s -> s.rating).orElse(0.0),
+            "price", x.price,
+            "shipping_cost", x.shippingCost))
+        .toList();
+    Map<String, Object> m = new LinkedHashMap<>();
+    m.put("product_id", p.productId);
+    m.put("name", p.name);
+    m.put("category", p.category);
+    m.put("price", p.price);
+    m.put("image_url", p.imageUrl);
+    m.put("sellers", siblings);
+    m.put("avg_rating", avgRating.apply(p.productId));
+    m.put("reviews", reviews.apply(p.productId));
+    return m;
   }
 }

@@ -12,7 +12,7 @@ class FeedServiceTest {
 
   private FeedService.FeedRow row(String id, long updatedAt) {
     return new FeedService.FeedRow(
-        id, "P1", "Keyboard", "countered", "buyer", 1, 45.0, updatedAt,
+        id, "P1", "Keyboard", 1, 0.0, false, "countered", "buyer", 1, 45.0, updatedAt,
         List.of(new FeedService.FeedRound(1, "buyer", 45.0, "hi")));
   }
 

@@ -23,6 +23,9 @@ public interface NegotiationRepo extends JpaRepository<NegotiationEntity, String
              n.lastActor = :lastActor,
              n.currentRound = :nextRound,
              n.currentPrice = :nextPrice,
+             n.currentFreebiesCost = :freebiesCost,
+             n.currentFreeShipping = :freeShip,
+             n.quantity = :qty,
              n.updatedAt = :now
        where n.negotiationId = :id
          and n.currentRound = :expected
@@ -34,5 +37,8 @@ public interface NegotiationRepo extends JpaRepository<NegotiationEntity, String
       @Param("status") String status,
       @Param("lastActor") String lastActor,
       @Param("nextRound") int nextRound,
-      @Param("nextPrice") double nextPrice);
+      @Param("nextPrice") double nextPrice,
+      @Param("freebiesCost") double freebiesCost,
+      @Param("freeShip") boolean freeShip,
+      @Param("qty") int qty);
 }

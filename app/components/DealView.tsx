@@ -11,9 +11,20 @@ const STATUS_LABEL: Record<string, string> = {
   rejected: "no deal",
 };
 
-export function DealView({ negotiation }: { negotiation: LiveNegotiation }) {
+export function DealView({
+  negotiation,
+  listPrice,
+}: {
+  negotiation: LiveNegotiation;
+  listPrice?: number;
+}) {
   const n = negotiation;
   const thinking = n.status === "countered";
+  const saved =
+    listPrice && listPrice > n.currentPrice
+      ? Math.round(((listPrice - n.currentPrice) / listPrice) * 100)
+      : null;
+
   return (
     <div className="deal">
       <div className="deal__head">
@@ -35,9 +46,19 @@ export function DealView({ negotiation }: { negotiation: LiveNegotiation }) {
         ))}
       </ol>
 
+      <div className="deal__terms">
+        {n.quantity > 1 ? <span className="tag">qty {n.quantity}</span> : null}
+        {n.freebiesCost > 0 ? (
+          <span className="tag">+ free add-ons (${n.freebiesCost.toFixed(2)} value)</span>
+        ) : null}
+        {n.freeShipping ? <span className="tag">+ free shipping</span> : null}
+      </div>
+
       <div className="deal__foot">
-        current price <strong>{n.currentPrice.toFixed(2)}</strong> · round{" "}
-        {n.currentRound}
+        current price <strong>{n.currentPrice.toFixed(2)}</strong> · round {n.currentRound}
+        {saved != null ? (
+          <span className="saved"> · agent saved you ~{saved}% off list</span>
+        ) : null}
       </div>
     </div>
   );
