@@ -1,0 +1,21 @@
+# Local Microsoft SQL Server for the Java backend.
+#   docker compose up -d
+#   docker compose exec mssql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa \
+#     -P 'Your_strong_Passw0rd' -C -Q "CREATE DATABASE marketplace"
+# Flyway (V1__init.sql) creates the tables on the backend's first boot.
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mcp-marketplace-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Your_strong_Passw0rd"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+
+volumes:
+  mssql-data:

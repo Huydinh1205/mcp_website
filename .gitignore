@@ -1,0 +1,39 @@
+# dependencies
+/node_modules
+
+# next
+/.next
+/out
+next-env.d.ts
+*.tsbuildinfo
+
+# production
+/build
+
+# env
+.env
+.env*.local
+
+# prisma
+/prisma/*.db
+/prisma/migrations/**/migration_lock.toml
+
+# test
+/playwright-report
+/test-results
+/coverage
+
+# agent folders (may hold credentials/tokens)
+/.claude
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+
+/.specify
+
+TODOS.md
+
+.env*
+/specs

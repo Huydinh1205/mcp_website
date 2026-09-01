@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:sqlserver://localhost:1433;databaseName=marketplace;encrypt=true;trustServerCertificate=true}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:Your_strong_Passw0rd}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate.globally_quoted_identifiers: true
+  flyway:
+    enabled: true
+
+server:
+  port: ${PORT:8080}
+
+app:
+  confirm-secret: ${CONFIRM_TOKEN_SECRET:dev-only-confirm-secret-change-me}
+  seller-mode: ${SELLER_MODE:server}
+  openai-api-key: ${OPENAI_API_KEY:}
+  openai-model: ${OPENAI_MODEL:gpt-4o-mini}
+  cors-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
+
+logging:
+  level:
+    org.hibernate.SQL: warn
