@@ -50,6 +50,16 @@ public class OrdersController {
         "order_id", r.orderId(), "negotiation_id", r.negotiationId(), "total", r.total()));
   }
 
+  /** Cart checkout: buy every line at list price in one transaction. */
+  @SuppressWarnings("unchecked")
+  @PostMapping("/api/orders/checkout")
+  public ResponseEntity<?> checkout(@RequestBody Map<String, Object> body) {
+    if (!CurrentUser.isBuyer()) return ResponseEntity.status(403).body(Map.of("error", "BUYER_ONLY"));
+    var items = (List<Map<String, Object>>) body.getOrDefault("items", List.of());
+    if (items.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error", "EMPTY_CART"));
+    return ResponseEntity.ok(Map.of("lines", orders.checkout(CurrentUser.id(), items)));
+  }
+
   /** The signed-in buyer's orders, newest first, with delivery tracking. */
   @GetMapping("/api/orders")
   public ResponseEntity<?> myOrders() {

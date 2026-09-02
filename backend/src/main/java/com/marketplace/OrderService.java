@@ -61,6 +61,26 @@ public class OrderService {
     static BuyResult err(String e) { return new BuyResult(null, null, 0, e); }
   }
 
+  /** Buy several lines in one go (cart checkout). Each line becomes its own
+   *  order (real stores split shipments too), all in one transaction. */
+  @Transactional
+  public List<Map<String, Object>> checkout(String buyerId, List<Map<String, Object>> items) {
+    java.util.ArrayList<Map<String, Object>> out = new java.util.ArrayList<>();
+    for (Map<String, Object> it : items) {
+      String pid = String.valueOf(it.get("product_id"));
+      int q;
+      try { q = (int) Math.round(Double.parseDouble(String.valueOf(it.getOrDefault("quantity", 1)))); }
+      catch (NumberFormatException e) { q = 1; }
+      BuyResult r = buyNow(buyerId, pid, q);
+      Map<String, Object> line = new LinkedHashMap<>();
+      line.put("product_id", pid);
+      if (r.error() != null) line.put("error", r.error());
+      else { line.put("order_id", r.orderId()); line.put("total", r.total()); }
+      out.add(line);
+    }
+    return out;
+  }
+
   @Transactional
   public BuyResult buyNow(String buyerId, String productId, int quantity) {
     ProductEntity p = products.findById(Long.valueOf(productId)).orElse(null);

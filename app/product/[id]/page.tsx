@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { Stars } from "@/app/components/Stars";
 import { compact, money, ago } from "@/lib/format";
 import { buyNow } from "@/lib/orders";
+import { addToCart } from "@/lib/cart";
 
 interface Review {
   rating: number;
@@ -117,6 +118,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const [qty, setQty] = useState(1);
   const [buying, setBuying] = useState<string | null>(null);
   const [bought, setBought] = useState<{ orderId: string; total: number } | null>(null);
+  const [added, setAdded] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/products/${encodeURIComponent(id)}`)
@@ -162,6 +164,21 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     } finally {
       setBuying(null);
     }
+  };
+
+  const addCart = (s: SellerRow) => {
+    addToCart(
+      {
+        product_id: s.product_id,
+        name: d.name,
+        price: s.price,
+        image_url: d.image_url ?? null,
+        seller_name: s.seller_name,
+      },
+      qty,
+    );
+    setAdded(s.product_id);
+    setTimeout(() => setAdded(null), 1500);
   };
 
   return (
@@ -224,6 +241,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             >
               {buying === d.product_id ? "Placing…" : `Buy now · $${money(d.price * qty)}`}
             </button>
+            <button className="secondary" onClick={() => addCart(d.sellers[0])}>
+              {added === d.sellers[0]?.product_id ? "Added ✓" : "Add to cart"}
+            </button>
             <button className="secondary" onClick={() => negotiate(d.sellers[0])}>
               Negotiate with agent
             </button>
@@ -272,6 +292,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                     onClick={() => buy(s.product_id)}
                   >
                     {buying === s.product_id ? "…" : "Buy now"}
+                  </button>
+                  <button className="secondary" onClick={() => addCart(s)}>
+                    {added === s.product_id ? "Added ✓" : "Add to cart"}
                   </button>
                   <button className="secondary" onClick={() => negotiate(s)}>
                     {user?.role === "buyer" ? "Negotiate" : "Log in"}
