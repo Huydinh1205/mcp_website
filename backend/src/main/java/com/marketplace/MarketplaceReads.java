@@ -41,7 +41,12 @@ public class MarketplaceReads {
     this.rounds = rounds;
   }
 
-  private static Long lid(String s) { return s == null ? null : Long.valueOf(s); }
+  /** Parse an id from the wire; -1 (never a real key) on anything non-numeric
+   *  so callers 404 instead of 500. */
+  private static Long lid(String s) {
+    if (s == null) return null;
+    try { return Long.valueOf(s.trim()); } catch (NumberFormatException e) { return -1L; }
+  }
 
   private static String imageOf(ProductEntity p) {
     if (p.imageUrl != null && !p.imageUrl.isBlank()) return p.imageUrl;

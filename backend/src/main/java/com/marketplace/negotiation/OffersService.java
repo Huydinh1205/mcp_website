@@ -23,18 +23,29 @@ import org.springframework.stereotype.Service;
 @Service
 public class OffersService {
 
-  public static final int ROUND_CAP = 3;
+  // Shared-schema negotiations open at round 1 (CHK_Negotiation_CurrentRound),
+  // so the opening offer lands on round 2. Cap of 4 leaves ~2 counter exchanges.
+  public static final int ROUND_CAP = 4;
 
   public TurnResult applyTurn(NegotiationSnapshot s, TurnInput in) {
     Side actor = in.actor();
     TurnAction action = in.action();
     DealTerms terms = in.terms();
 
-    // 1. Frozen once finished, or once a side accepted and it awaits human confirms.
-    if (s.status() == CONFIRMED
-        || s.status() == REJECTED
-        || s.status() == BUYER_ACCEPTED
-        || s.status() == SELLER_ACCEPTED) {
+    // 1. Frozen once finished.
+    if (s.status() == CONFIRMED || s.status() == REJECTED) {
+      return err(CLOSED);
+    }
+
+    // 1b. One side already accepted and it awaits human confirms. The ONLY move
+    //     left is the OTHER side also accepting (so both get a confirm token);
+    //     anything else — including re-accepting — is closed.
+    if (s.status() == BUYER_ACCEPTED || s.status() == SELLER_ACCEPTED) {
+      boolean buyerAlready = s.status() == BUYER_ACCEPTED;
+      if (action == ACCEPT && actor == (buyerAlready ? SELLER : BUYER)) {
+        return ok(new TurnOutcome(
+            s.status(), actor, s.currentRound(), s.currentPrice(), false, true, null, null));
+      }
       return err(CLOSED);
     }
 
