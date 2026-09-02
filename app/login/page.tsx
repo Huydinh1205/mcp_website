@@ -6,8 +6,8 @@ import Link from "next/link";
 import { login } from "@/lib/auth";
 
 const DEMO = {
-  buyer: { email: "mai@example.com", password: "password" },
-  seller: { email: "keylab@example.com", password: "password" },
+  buyer: { email: "mai.demo@example.com", password: "password" },
+  seller: { email: "keylab.demo@example.com", password: "password" },
 };
 
 export default function LoginPage() {
@@ -49,9 +49,9 @@ export default function LoginPage() {
 
       <section className="panel">
         <h2>Demo accounts (password: <code>password</code>)</h2>
-        <button onClick={() => fill("buyer")}>Fill buyer (mai@example.com)</button>{" "}
-        <button onClick={() => fill("seller")}>Fill seller (keylab@example.com)</button>
-        <p className="muted">Other seed logins: long@ / an@ (buyers) · nordic@ / budget@ / aurora@ / cablepit@ (sellers)</p>
+        <button onClick={() => fill("buyer")}>Fill buyer (mai.demo@example.com)</button>{" "}
+        <button onClick={() => fill("seller")}>Fill seller (keylab.demo@example.com)</button>
+        <p className="muted">Also: long.demo@example.com (buyer). Password: <code>password</code></p>
       </section>
 
       <p>No account? <Link href="/register">Register</Link></p>
