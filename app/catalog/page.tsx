@@ -1,26 +1,42 @@
 "use client";
 
-// Human catalog (US4): browse / search / filter. Click a product to see every
-// seller carrying it, then send your agent to negotiate.
+// Storefront listing (US4): search, filters, sort, dense product cards
+// (image · title · price + strike + discount · rating · sold · free-ship).
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { API_BASE } from "@/lib/api";
+import { Stars } from "@/app/components/Stars";
+import { compact, money } from "@/lib/format";
 
 interface Row {
   product_id: string;
   name: string;
   price: number;
+  compare_at_price?: number | null;
+  discount_pct?: number;
+  rating_avg?: number;
+  rating_count?: number;
+  sold_count?: number;
+  free_shipping?: boolean;
   image_url?: string | null;
   seller_name: string;
-  seller_rating: number;
 }
+
+const SORTS = [
+  ["", "Relevance"],
+  ["sold", "Best selling"],
+  ["rating", "Top rated"],
+  ["price_asc", "Price: low to high"],
+  ["price_desc", "Price: high to low"],
+] as const;
 
 export default function CatalogPage() {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [minRating, setMinRating] = useState("");
+  const [sort, setSort] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
@@ -35,6 +51,7 @@ export default function CatalogPage() {
     if (category) params.set("category", category);
     if (maxPrice) params.set("maxPrice", maxPrice);
     if (minRating) params.set("minRating", minRating);
+    if (sort) params.set("sort", sort);
     setLoading(true);
     const t = setTimeout(() => {
       fetch(`${API_BASE}/api/products?${params}`)
@@ -44,25 +61,35 @@ export default function CatalogPage() {
         .finally(() => setLoading(false));
     }, 200);
     return () => clearTimeout(t);
-  }, [q, category, maxPrice, minRating]);
+  }, [q, category, maxPrice, minRating, sort]);
 
-  // group by name so the grid shows one card per product with a "from N sellers"
-  const grouped = useMemo(() => {
-    const m = new Map<string, { name: string; min: number; count: number; anyId: string; img?: string | null }>();
+  // one card per product name; keep the cheapest listing + a "from N shops" count
+  const cards = useMemo(() => {
+    const m = new Map<string, Row & { shops: number }>();
     for (const r of rows) {
       const g = m.get(r.name);
-      if (!g) m.set(r.name, { name: r.name, min: r.price, count: 1, anyId: r.product_id, img: r.image_url });
+      if (!g) m.set(r.name, { ...r, shops: 1 });
       else {
-        g.count += 1;
-        g.min = Math.min(g.min, r.price);
+        g.shops += 1;
+        if (r.price < g.price) Object.assign(g, r, { shops: g.shops });
       }
     }
-    return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
+    return [...m.values()];
   }, [rows]);
 
   return (
-    <main className="wrap">
-      <h1>Catalog</h1>
+    <main className="wrap wide">
+      <div className="listing-head">
+        <h1>Catalog</h1>
+        <label className="sort">
+          Sort
+          <select value={sort} onChange={(e) => setSort(e.target.value)}>
+            {SORTS.map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <section className="panel filters">
         <input placeholder="Search products…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -72,40 +99,46 @@ export default function CatalogPage() {
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-        <input
-          type="number"
-          placeholder="Max price"
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
-        />
-        <input
-          type="number"
-          step="0.1"
-          placeholder="Min rating"
-          value={minRating}
-          onChange={(e) => setMinRating(e.target.value)}
-        />
+        <input type="number" placeholder="Max price" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} />
+        <input type="number" step="0.1" placeholder="Min rating" value={minRating} onChange={(e) => setMinRating(e.target.value)} />
       </section>
 
-      <section className="panel">
-        {loading ? <p className="muted">Loading…</p> : null}
-        {!loading && grouped.length === 0 ? <p className="muted">No products.</p> : null}
-        <div className="grid">
-          {grouped.map((g) => (
-            <Link key={g.name} href={`/product/${encodeURIComponent(g.anyId)}`} className="card">
-              {g.img ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img className="card__img" src={g.img} alt={g.name} />
-              ) : null}
-              <div className="card__name">{g.name}</div>
-              <div className="card__price">from {g.min.toFixed(2)}</div>
-              <div className="card__sub">
-                {g.count} seller{g.count > 1 ? "s" : ""}
+      {loading && cards.length === 0 ? <p className="muted">Loading…</p> : null}
+      {!loading && cards.length === 0 ? <p className="muted">No products match.</p> : null}
+
+      <div className="pgrid">
+        {cards.map((p) => {
+          const hasDisc = (p.discount_pct ?? 0) > 0 && p.compare_at_price;
+          return (
+            <Link key={p.name} href={`/product/${encodeURIComponent(p.product_id)}`} className="pcard">
+              <div className="pcard__media">
+                {p.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.image_url} alt={p.name} loading="lazy" />
+                ) : null}
+                {hasDisc ? <span className="disc">-{p.discount_pct}%</span> : null}
+              </div>
+              <div className="pcard__body">
+                <div className="pcard__name">{p.name}</div>
+                <div className="pcard__price">
+                  <span className="now">${money(p.price)}</span>
+                  {hasDisc ? <span className="was">${money(p.compare_at_price!)}</span> : null}
+                </div>
+                <div className="pcard__meta">
+                  <Stars value={p.rating_avg ?? 0} />
+                  <span>{(p.rating_avg ?? 0).toFixed(1)}</span>
+                  <span className="dot">·</span>
+                  <span>{compact(p.sold_count ?? 0)} sold</span>
+                </div>
+                <div className="pcard__foot">
+                  {p.free_shipping ? <span className="chip chip--ship">Free shipping</span> : null}
+                  {p.shops > 1 ? <span className="chip">{p.shops} shops</span> : null}
+                </div>
               </div>
             </Link>
-          ))}
-        </div>
-      </section>
+          );
+        })}
+      </div>
     </main>
   );
 }

@@ -1,9 +1,11 @@
 package com.marketplace;
 
 import com.marketplace.db.*;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import org.springframework.stereotype.Service;
 
 /** Read queries backing the WebMCP tools + directory endpoints. */
@@ -35,6 +37,17 @@ public class MarketplaceReads {
     this.rounds = rounds;
   }
 
+  private void storefront(Map<String, Object> m, ProductEntity p) {
+    m.put("compare_at_price", p.compareAtPrice);
+    m.put("rating_avg", p.ratingAvg);
+    m.put("rating_count", p.ratingCount);
+    m.put("sold_count", p.soldCount);
+    m.put("free_shipping", p.shippingCost <= 0.0);
+    int pct = p.compareAtPrice != null && p.compareAtPrice > p.price
+        ? (int) Math.round((1 - p.price / p.compareAtPrice) * 100) : 0;
+    m.put("discount_pct", pct);
+  }
+
   private String sellerName(String sellerId) {
     return users.findById(sellerId)
         .map(u -> u.firstName + " " + u.lastName).orElse(sellerId);
@@ -45,26 +58,38 @@ public class MarketplaceReads {
   }
 
   public List<Map<String, Object>> searchProducts(String query, Double maxPrice, Double minRating, String category) {
-    return products.findByNameContainingIgnoreCase(query == null ? "" : query).stream()
+    return searchProducts(query, maxPrice, minRating, category, null);
+  }
+
+  public List<Map<String, Object>> searchProducts(String query, Double maxPrice, Double minRating,
+      String category, String sort) {
+    var stream = products.findByNameContainingIgnoreCase(query == null ? "" : query).stream()
         .filter(p -> maxPrice == null || p.price <= maxPrice)
         .filter(p -> category == null || category.isBlank() || category.equalsIgnoreCase(p.category))
         .filter(p -> {
           if (minRating == null) return true;
-          return sellers.findById(p.sellerId).map(s -> s.rating >= minRating).orElse(false);
-        })
-        .map(p -> {
-          Map<String, Object> m = new LinkedHashMap<>();
-          m.put("product_id", p.productId);
-          m.put("name", p.name);
-          m.put("price", p.price);
-          m.put("category", p.category);
-          m.put("image_url", p.imageUrl);
-          m.put("seller_name", sellerName(p.sellerId));
-          m.put("seller_rating", sellers.findById(p.sellerId).map(x -> x.rating).orElse(0.0));
-          return m;
-        })
-        .limit(20)
-        .toList();
+          return p.ratingAvg >= minRating;
+        });
+    java.util.Comparator<ProductEntity> cmp = switch (sort == null ? "" : sort) {
+      case "price_asc" -> java.util.Comparator.comparingDouble(x -> x.price);
+      case "price_desc" -> java.util.Comparator.comparingDouble((ProductEntity x) -> x.price).reversed();
+      case "rating" -> java.util.Comparator.comparingDouble((ProductEntity x) -> x.ratingAvg).reversed();
+      case "sold" -> java.util.Comparator.comparingInt((ProductEntity x) -> x.soldCount).reversed();
+      default -> null;
+    };
+    if (cmp != null) stream = stream.sorted(cmp);
+    return stream.map(p -> {
+      Map<String, Object> m = new LinkedHashMap<>();
+      m.put("product_id", p.productId);
+      m.put("name", p.name);
+      m.put("price", p.price);
+      m.put("category", p.category);
+      m.put("image_url", p.imageUrl);
+      m.put("seller_name", sellerName(p.sellerId));
+      m.put("seller_rating", sellers.findById(p.sellerId).map(x -> x.rating).orElse(0.0));
+      storefront(m, p);
+      return m;
+    }).limit(60).toList();
   }
 
   public Map<String, Object> getProduct(String productId, String buyerId) {
@@ -79,6 +104,8 @@ public class MarketplaceReads {
     m.put("price", p.price);
     m.put("seller_name", sellerName(p.sellerId));
     m.put("seller_rating", sellers.findById(p.sellerId).map(s -> s.rating).orElse(0.0));
+    m.put("rating_avg", p.ratingAvg);
+    m.put("review_count", p.ratingCount);
     m.put("remaining", p.remainings);
     m.put("open_negotiation_id", open);
     return m;
@@ -191,30 +218,73 @@ public class MarketplaceReads {
         .distinct().sorted().toList();
   }
 
-  /** Product detail for the human catalog: every seller carrying this name + reviews. */
-  public Map<String, Object> productDetail(String productId, java.util.function.Function<String, Double> avgRating,
-      java.util.function.Function<String, List<Map<String, Object>>> reviews) {
+  /**
+   * Product detail for the human catalog. Every seller carrying this name is a
+   * separate listing with its OWN reviews: each entry in `sellers` carries that
+   * shop's rating_avg / rating_count / rating_breakdown / reviews. The top-level
+   * `reviews` / `avg_rating` / `rating_breakdown` merge across all shops, and
+   * each merged review is tagged with `seller_name`.
+   */
+  public Map<String, Object> productDetail(String productId,
+      Function<String, Double> avgRating,
+      Function<String, List<Map<String, Object>>> reviews,
+      Function<String, int[]> breakdown) {
     ProductEntity p = products.findById(productId).orElse(null);
     if (p == null) return null;
-    var siblings = products.findByNameContainingIgnoreCase(p.name).stream()
+
+    var listings = products.findByNameContainingIgnoreCase(p.name).stream()
         .filter(x -> x.name.equalsIgnoreCase(p.name))
-        .map(x -> Map.<String, Object>of(
-            "product_id", x.productId,
-            "seller_id", x.sellerId,
-            "seller_name", sellerName(x.sellerId),
-            "seller_rating", sellers.findById(x.sellerId).map(s -> s.rating).orElse(0.0),
-            "price", x.price,
-            "shipping_cost", x.shippingCost))
         .toList();
+
+    List<Map<String, Object>> sellerRows = new ArrayList<>();
+    List<Map<String, Object>> mergedReviews = new ArrayList<>();
+    int[] mergedBreakdown = new int[5];
+
+    for (ProductEntity x : listings) {
+      String shop = sellerName(x.sellerId);
+      List<Map<String, Object>> xReviews = reviews.apply(x.productId);
+      int[] xBreakdown = breakdown.apply(x.productId);
+
+      Map<String, Object> row = new LinkedHashMap<>();
+      row.put("product_id", x.productId);
+      row.put("seller_id", x.sellerId);
+      row.put("seller_name", shop);
+      row.put("seller_rating", sellers.findById(x.sellerId).map(s -> s.rating).orElse(0.0));
+      row.put("price", x.price);
+      row.put("shipping_cost", x.shippingCost);
+      row.put("rating_avg", x.ratingAvg > 0 ? x.ratingAvg : avgRating.apply(x.productId));
+      row.put("rating_count", x.ratingCount > 0 ? x.ratingCount : xReviews.size());
+      row.put("rating_breakdown", xBreakdown);
+      row.put("reviews", xReviews);
+      sellerRows.add(row);
+
+      for (int i = 0; i < 5; i++) mergedBreakdown[i] += xBreakdown[i];
+      for (Map<String, Object> r : xReviews) {
+        Map<String, Object> tagged = new LinkedHashMap<>(r);
+        tagged.put("seller_name", shop);
+        mergedReviews.add(tagged);
+      }
+    }
+    mergedReviews.sort((a, b) ->
+        String.valueOf(b.get("created_at")).compareTo(String.valueOf(a.get("created_at"))));
+
+    double modelAvg = mergedReviews.isEmpty()
+        ? (p.ratingAvg > 0 ? p.ratingAvg : 0.0)
+        : Math.round(mergedReviews.stream()
+            .mapToInt(r -> ((Number) r.get("rating")).intValue()).average().orElse(0) * 10) / 10.0;
+
     Map<String, Object> m = new LinkedHashMap<>();
     m.put("product_id", p.productId);
     m.put("name", p.name);
     m.put("category", p.category);
     m.put("price", p.price);
     m.put("image_url", p.imageUrl);
-    m.put("sellers", siblings);
-    m.put("avg_rating", avgRating.apply(p.productId));
-    m.put("reviews", reviews.apply(p.productId));
+    storefront(m, p);
+    m.put("sellers", sellerRows);
+    m.put("avg_rating", modelAvg);
+    m.put("rating_count", mergedReviews.size());
+    m.put("rating_breakdown", mergedBreakdown);
+    m.put("reviews", mergedReviews);
     return m;
   }
 }

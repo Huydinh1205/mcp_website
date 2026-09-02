@@ -1,10 +1,10 @@
 -- Catalog category, seller coupons, and post-purchase reviews.
 -- applyTurn() is unchanged: coupons apply at confirmation, not per turn.
 
-ALTER TABLE products ADD category NVARCHAR(50) NULL;
-ALTER TABLE products ADD shipping_cost FLOAT NOT NULL DEFAULT 5;
+ALTER TABLE ${app_schema}.products ADD category NVARCHAR(50) NULL;
+ALTER TABLE ${app_schema}.products ADD shipping_cost FLOAT NOT NULL DEFAULT 5;
 
-CREATE TABLE discounts (
+CREATE TABLE ${app_schema}.discounts (
   discount_id NVARCHAR(64)  NOT NULL PRIMARY KEY,
   code        NVARCHAR(40)  NOT NULL UNIQUE,
   label       NVARCHAR(120) NULL,
@@ -16,14 +16,14 @@ CREATE TABLE discounts (
   end_date    DATETIME2     NOT NULL
 );
 
-CREATE TABLE applied_discounts (
+CREATE TABLE ${app_schema}.applied_discounts (
   negotiation_id NVARCHAR(64) NOT NULL,
   discount_id    NVARCHAR(64) NOT NULL,
   applied_at     DATETIME2    NOT NULL DEFAULT SYSUTCDATETIME(),
   CONSTRAINT pk_applied_discounts PRIMARY KEY (negotiation_id, discount_id)
 );
 
-CREATE TABLE feedback (
+CREATE TABLE ${app_schema}.feedback (
   feedback_id    NVARCHAR(64)   NOT NULL PRIMARY KEY,
   product_id     NVARCHAR(64)   NOT NULL,
   negotiation_id NVARCHAR(64)   NOT NULL,
@@ -33,12 +33,12 @@ CREATE TABLE feedback (
   created_at     DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME()
 );
 
-CREATE INDEX ix_discounts_product ON discounts(product_id);
-CREATE INDEX ix_discounts_seller  ON discounts(seller_id);
-CREATE INDEX ix_feedback_product  ON feedback(product_id);
-CREATE INDEX ix_products_category ON products(category);
+CREATE INDEX ix_discounts_product ON ${app_schema}.discounts(product_id);
+CREATE INDEX ix_discounts_seller  ON ${app_schema}.discounts(seller_id);
+CREATE INDEX ix_feedback_product  ON ${app_schema}.feedback(product_id);
+CREATE INDEX ix_products_category ON ${app_schema}.products(category);
 
 -- Multi-term deal state (freebies / free shipping) carried on the negotiation.
-ALTER TABLE negotiations ADD current_freebies_cost FLOAT NOT NULL DEFAULT 0;
-ALTER TABLE negotiations ADD current_free_shipping BIT NOT NULL DEFAULT 0;
-ALTER TABLE negotiation_rounds ADD terms NVARCHAR(MAX) NULL;
+ALTER TABLE ${app_schema}.negotiations ADD current_freebies_cost FLOAT NOT NULL DEFAULT 0;
+ALTER TABLE ${app_schema}.negotiations ADD current_free_shipping BIT NOT NULL DEFAULT 0;
+ALTER TABLE ${app_schema}.negotiation_rounds ADD terms NVARCHAR(MAX) NULL;

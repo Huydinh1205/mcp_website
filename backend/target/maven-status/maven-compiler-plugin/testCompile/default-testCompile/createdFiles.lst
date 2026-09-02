@@ -1,9 +1,13 @@
 com/marketplace/SellerFlowTest.class
 com/marketplace/FeedServiceTest.class
+com/marketplace/CatalogAndDealsTest.class
 com/marketplace/ContextAndApiTest.class
 com/marketplace/TokenServiceTest.class
 com/marketplace/negotiation/OffersServiceTest$Snap.class
+com/marketplace/IdorGuardsTest.class
+com/marketplace/TestAuth.class
 com/marketplace/negotiation/OffersServiceTest.class
 com/marketplace/OrderServiceTest.class
 com/marketplace/NegotiationServiceTest.class
+com/marketplace/AuthTest.class
 com/marketplace/DiscountServiceTest.class

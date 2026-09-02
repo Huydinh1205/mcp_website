@@ -53,13 +53,26 @@ public class FeedbackService {
 
   public List<Map<String, Object>> reviewsFor(String productId) {
     return feedback.findByProductIdOrderByCreatedAtDesc(productId).stream()
+        .limit(50)
         .map(r -> {
           Map<String, Object> m = new LinkedHashMap<>();
           m.put("rating", r.ratingScore);
           m.put("comment", r.comment);
+          m.put("reviewer", r.reviewerName == null ? "Anonymous" : r.reviewerName);
+          m.put("verified", r.verified);
           m.put("created_at", r.createdAt);
           return m;
         })
         .toList();
+  }
+
+  /** counts per star 5..1 */
+  public int[] breakdown(String productId) {
+    int[] b = new int[5];
+    for (var r : feedback.findByProductIdOrderByCreatedAtDesc(productId)) {
+      int i = Math.min(5, Math.max(1, r.ratingScore));
+      b[5 - i]++;
+    }
+    return b;
   }
 }

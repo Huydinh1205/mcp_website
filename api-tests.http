@@ -1,0 +1,370 @@
+##############################################################################
+# Agent Negotiation Marketplace — API test bench
+#
+# Open in VS Code (REST Client ext) or JetBrains HTTP client. Each `###` block
+# is one runnable request. Run them TOP -> BOTTOM: later blocks reuse values
+# (@token, @neg, @pid) captured from earlier responses.
+#
+# ---------------------------------------------------------------------------
+# WHEN YOU POINT THIS AT A FRESH DATABASE — run in this exact order:
+#
+#   PHASE 0  health .............. DB reachable, Flyway migrated, seed loaded
+#   PHASE 1  auth ............... register / login / me  -> get a JWT
+#   PHASE 2  catalog reads ...... search / detail / categories (public)
+#   PHASE 3  negotiation engine . submit -> counter -> accept  (NO LLM)
+#   PHASE 4  human confirm ...... turn an accepted deal into an order
+#   PHASE 5  feed .............. polling endpoint the UI reads
+#   PHASE 6  seller side ........ incoming offers / respond   (NO LLM)
+#   PHASE 7  LLM proxy ......... /api/agent/turn   <-- COSTS OPENAI TOKENS
+#
+# Phases 0-6 exercise the ENTIRE system except the model, and cost 0 tokens.
+# The agent loop just calls Phase 2/3/6 tools in a loop with an LLM deciding
+# the arguments. If any of 0-6 is red, the agent will fail too — but you'll
+# have burned OpenAI credit finding that out. So: get 0-6 green first, then
+# run Phase 7 ONCE to confirm the key + proxy, then test the agent in the UI.
+##############################################################################
+
+@base = http://localhost:8080
+
+
+##############################################################################
+# PHASE 0 — HEALTH  (no auth, no tokens)
+# Goal: prove the app booted, the new DB is wired, migrations ran, seed ran.
+##############################################################################
+
+### 0.1  Catalog list — the cheapest end-to-end proof of life.
+# Hits: Spring MVC -> CatalogController -> MarketplaceReads -> JPA -> SQL Server.
+# A 200 with a non-empty JSON array means: DB connection OK, Flyway schema is
+# present, AND SeedRunner populated it (it seeds only when users.count() == 0,
+# so on a brand-new DB the first boot creates 5 sellers / 3 buyers / ~25
+# products / 3 coupons). Empty array -> seed did not run (DB not actually
+# empty on first boot, or SeedRunner disabled) — fix before going further.
+GET {{base}}/api/products
+
+### 0.2  Swagger UI is served — lists every endpoint with schemas.
+# Open the URL in a browser: {{base}}/swagger-ui.html
+GET {{base}}/v3/api-docs
+
+### 0.3  Auth is actually enforced — a protected route with no token = 401.
+# If this returns 200 your security filter chain is misconfigured.
+GET {{base}}/api/negotiations
+
+
+##############################################################################
+# PHASE 1 — AUTH  (no tokens)
+# Goal: get a working JWT. Everything in Phase 3+ needs `Authorization: Bearer`.
+##############################################################################
+
+### 1.1  Register a fresh buyer.
+# POST /api/auth/register {name,email,password,role}
+# - role must be "buyer" or "seller" (else 400 BAD_ROLE)
+# - password >= 6 chars (else 400 BAD_INPUT)
+# - duplicate email -> 400 EMAIL_TAKEN
+# Creates: users row (password BCrypt-hashed) + a buyer/seller row + default
+# BuyerAiConfig (maxBudget 200 / target 120). Returns {token, role, userId}.
+# Re-running this block a second time SHOULD give 400 EMAIL_TAKEN — that's a
+# healthy uniqueness check, not a failure.
+POST {{base}}/api/auth/register
+Content-Type: application/json
+
+{ "name": "Test Buyer", "email": "test.buyer@example.com", "password": "secret123", "role": "buyer" }
+
+### 1.2  Log in as a SEEDED buyer (works on any fresh seed).
+# POST /api/auth/login {email,password} -> {token, role, userId}
+# Wrong password -> 401 BAD_CREDENTIALS. Seeded logins (all password "password"):
+#   buyers : mai@example.com  long@example.com  an@example.com
+#   sellers: keylab@example.com  nordic@example.com  budget@example.com
+#            aurora@example.com  cablepit@example.com
+# @name login  -> captures the response so {{token}} below resolves.
+# @name login
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "mai@example.com", "password": "password" }
+
+###
+@token = {{login.response.body.token}}
+
+### 1.3  Who am I — validates the JWT and echoes the principal.
+# GET /api/auth/me  (Bearer) -> {userId, name, email, role}
+# The identity for every negotiation call is taken from THIS principal, never
+# from a request body (that was an IDOR hole). 401 here = bad/expired token.
+GET {{base}}/api/auth/me
+Authorization: Bearer {{token}}
+
+
+##############################################################################
+# PHASE 2 — CATALOG READS  (public; also the buyer agent's "eyes")
+# The agent calls search_products / get_product to decide what to negotiate.
+# Test them by hand so you know the data is sane before the agent relies on it.
+##############################################################################
+
+### 2.1  Search + filter + sort  (public REST form used by the storefront)
+# GET /api/products?q=&category=&maxPrice=&minRating=&sort=
+#   sort: price_asc | price_desc | rating | sold   (default: relevance)
+# Returns storefront cards: price, compare_at_price, discount_pct, rating_avg,
+# rating_count, sold_count, free_shipping, image_url, seller_name.
+GET {{base}}/api/products?q=keyboard&sort=sold
+
+### 2.2  Same search through the WebMCP tool transport (what the agent calls)
+# POST /api/mcp {tool:"search_products", args:{query, max_price?, min_seller_rating?, category?}}
+# Needs a Bearer token (any logged-in user). Same rows as 2.1.
+# @name search
+POST {{base}}/api/mcp
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "tool": "search_products", "args": { "query": "65% Mechanical Keyboard" } }
+
+### 2.3  Grab a product_id from the search above for the rest of the file.
+# REST Client can't index into an array response reliably, so paste one of the
+# "product_id" values from 2.2 here:
+@pid = PASTE_PRODUCT_ID_FROM_2.2
+
+### 2.4  Product detail — every SHOP selling this model + reviews.
+# GET /api/products/{id}   (public)
+#  - sellers[]  : one row per shop, EACH with its own price, shipping_cost,
+#                 rating_avg, rating_count, rating_breakdown[5], reviews[]
+#  - reviews[]  : ALL shops' reviews merged, each tagged with seller_name
+#  - rating_breakdown : summed across shops  ([5star,4,3,2,1] counts)
+GET {{base}}/api/products/{{pid}}
+
+### 2.5  get_product via WebMCP — detail + YOUR open negotiation for it (if any)
+# POST /api/mcp {tool:"get_product", args:{product_id}}   (buyer Bearer)
+# Adds open_negotiation_id (non-null if you already have a live negotiation on
+# this product) plus rating_avg / review_count so the agent can weigh a shop.
+POST {{base}}/api/mcp
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "tool": "get_product", "args": { "product_id": "{{pid}}" } }
+
+### 2.6  Categories (public) — populates the storefront filter dropdown.
+GET {{base}}/api/categories
+
+### 2.7  list_addons — cheap items the SAME seller could throw in for free.
+# POST /api/mcp {tool:"list_addons", args:{product_id}}
+# Returns that seller's other products priced <= 40 (id, name, value). The
+# agent passes these ids as `freebies` in an offer. May be [] — still 200.
+POST {{base}}/api/mcp
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "tool": "list_addons", "args": { "product_id": "{{pid}}" } }
+
+### 2.8  list_coupons — valid codes for this product right now.
+# POST /api/mcp {tool:"list_coupons", args:{product_id}}
+# Seed has: WELCOME10 (10% global), KEYLAB5 ($5 off KeyLab), AUDIO15 (15% off
+# Aurora Audio). A coupon lowers the price only AT CONFIRMATION, not per turn.
+POST {{base}}/api/mcp
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "tool": "list_coupons", "args": { "product_id": "{{pid}}" } }
+
+
+##############################################################################
+# PHASE 3 — NEGOTIATION ENGINE  (buyer Bearer; NO LLM)
+# This is the core state machine: submit_offer -> counter_offer -> accept_offer.
+# Every state change routes through NegotiationService.commitTurn ->
+# OffersService.applyTurn (the ONE place transitions are decided).
+# Hard rules applyTurn enforces regardless of what any agent "says":
+#   - buyer total must stay <= maxBudget            (else 422 OVER_BUDGET)
+#   - seller NET (price - freebies - shipping given) >= floor (422 BELOW_FLOOR)
+#   - a seller counter can't exceed max_discount_step (422 STEP_TOO_BIG)
+#   - at most 3 rounds, then it auto-rejects
+#   - you can't act twice in a row (422 NOT_YOUR_TURN); stale round (422 STALE)
+##############################################################################
+
+### 3.1  submit_offer — open a negotiation with an opening DEAL.
+# POST /api/mcp {tool:"submit_offer", args:{
+#     product_id, price, quantity?, freebies?: string[], free_shipping?, message? }}
+# - One open negotiation per (buyer, product): a 2nd one -> 409 ALREADY_OPEN.
+#   (To rerun this file cleanly, either finish/reject the old one, log in as a
+#   different seeded buyer, or use a fresh DB.)
+# - With SELLER_MODE=server the seeded heuristic seller replies immediately and
+#   you'll see status "countered"/"seller_accepted" + a seller row in history.
+# - With SELLER_MODE=browser nothing auto-replies; status stays "countered"
+#   with only your buyer row until a real seller agent (Phase 6) responds.
+# @name offer
+POST {{base}}/api/mcp
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "tool": "submit_offer", "args": { "product_id": "{{pid}}", "price": 45, "quantity": 1, "free_shipping": true } }
+
+###
+@neg   = {{offer.response.body.negotiation_id}}
+@round = {{offer.response.body.current_round}}
+
+### 3.2  counter_offer — move the deal in an existing negotiation.
+# POST /api/mcp {tool:"counter_offer", args:{
+#     negotiation_id, price, round_seen, quantity?, freebies?, free_shipping?, message? }}
+# round_seen MUST equal the current_round you last read (optimistic lock). If
+# someone/something else moved the negotiation since, you get 422 STALE — re-read
+# state (3.4) and retry with the new round. Not-your-turn -> 422 NOT_YOUR_TURN.
+POST {{base}}/api/mcp
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "tool": "counter_offer", "args": { "negotiation_id": "{{neg}}", "price": 52, "round_seen": {{round}} } }
+
+### 3.3  apply_coupon — attach a code (does NOT change the negotiated base).
+# POST /api/mcp {tool:"apply_coupon", args:{negotiation_id, code}}
+# Guards: you must own the negotiation (else 404). Bad/expired/not-applicable
+# code -> 422. Returns {code, base_price, discount, effective_price}. The
+# discount is actually applied when the order is confirmed in Phase 4.
+POST {{base}}/api/mcp
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "tool": "apply_coupon", "args": { "negotiation_id": "{{neg}}", "code": "WELCOME10" } }
+
+### 3.4  list_my_offers — current state + full round history of YOUR negotiations.
+# POST /api/mcp {tool:"list_my_offers", args:{}}
+# Use this to read the fresh current_round before a counter, and to see how
+# applyTurn recorded each turn (author, proposed_price, message per round).
+POST {{base}}/api/mcp
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "tool": "list_my_offers", "args": {} }
+
+### 3.5  accept_offer — accept the seller's current deal.
+# POST /api/mcp {tool:"accept_offer", args:{negotiation_id, round_seen}}
+# Does NOT place an order. Returns:
+#   { status: "buyer_accepted", requires_human_confirmation: true,
+#     confirm_token: "<signed token: negotiationId + side>" }
+# The token is what a human presents in Phase 4. An order is only finalized
+# when BOTH sides have confirmed (two-sided confirmation).
+# @name accept
+POST {{base}}/api/mcp
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "tool": "accept_offer", "args": { "negotiation_id": "{{neg}}", "round_seen": {{round}} } }
+
+
+##############################################################################
+# PHASE 4 — HUMAN CONFIRMATION  ->  ORDER
+##############################################################################
+
+### 4.1  Confirm — exchange a confirm_token for a (partial) order.
+# POST /api/orders/confirm {confirm_token}
+# The token is verified + decoded server-side (TokenService + CONFIRM_SECRET);
+# a tampered/foreign token -> 400 INVALID_TOKEN. Returns:
+#   { order_id, status, buyer_confirmed, seller_confirmed }
+# status is "pending" until BOTH buyer_confirmed AND seller_confirmed are true,
+# then it flips to "confirmed" and the final price = current_price - coupon.
+# In SELLER_MODE=server the seeded seller pre-authorizes on accept, so a single
+# buyer confirm here can already show status "confirmed".
+POST {{base}}/api/orders/confirm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "confirm_token": "{{accept.response.body.confirm_token}}" }
+
+### 4.2  Leave a review — only allowed after the order is "confirmed".
+# POST /api/feedback {product_id, negotiation_id, rating (1-5), comment}
+# buyer_id is taken from the JWT, product_id/buyer_id are re-derived from the
+# negotiation server-side. Before purchase -> 400 NOT_PURCHASED. Reviewer must
+# be the buyer on that negotiation -> else 403 FORBIDDEN. One review per
+# negotiation -> 400 ALREADY_REVIEWED.
+POST {{base}}/api/feedback
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "product_id": "{{pid}}", "negotiation_id": "{{neg}}", "rating": 5, "comment": "Smooth negotiation, fast ship." }
+
+
+##############################################################################
+# PHASE 5 — POLLING FEED  (the UI reads this on a timer; no SSE)
+##############################################################################
+
+### 5.1  Negotiations feed — scoped to the caller by role.
+# GET /api/negotiations?since=<cursor>
+# - buyer  -> your own negotiations
+# - seller -> negotiations on your products
+# Returns { cursor, negotiations: [ {negotiationId, productId, name, status,
+#   currentPrice, currentRound, quantity, freebiesCost, freeShipping, ...} ] }.
+# Pass the returned cursor back as ?since= to get only what changed.
+GET {{base}}/api/negotiations?since=
+Authorization: Bearer {{token}}
+
+
+##############################################################################
+# PHASE 6 — SELLER SIDE  (seller Bearer; NO LLM)
+# Only meaningful with SELLER_MODE=browser (server mode auto-answers instead).
+# The seller agent loop just calls list_incoming_offers -> respond_to_offer.
+##############################################################################
+
+### 6.1  Log in as the seller who owns the product from 2.3.
+# (KeyLab Store = keylab@example.com. Match the seller to your @pid, or the
+#  ownership guards below return 404.)
+# @name sellerLogin
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "keylab@example.com", "password": "password" }
+
+###
+@stoken = {{sellerLogin.response.body.token}}
+
+### 6.2  list_incoming_offers — buyer offers waiting for THIS seller.
+# POST /api/mcp {tool:"list_incoming_offers", args:{}}
+# Each entry carries that product's min_price / auto_accept_price /
+# max_discount_step so the responder knows the bounds for that negotiation.
+POST {{base}}/api/mcp
+Authorization: Bearer {{stoken}}
+Content-Type: application/json
+
+{ "tool": "list_incoming_offers", "args": {} }
+
+### 6.3  get_offer_history — full round-by-round history (seller must own it).
+# POST /api/mcp {tool:"get_offer_history", args:{negotiation_id}}
+POST {{base}}/api/mcp
+Authorization: Bearer {{stoken}}
+Content-Type: application/json
+
+{ "tool": "get_offer_history", "args": { "negotiation_id": "{{neg}}" } }
+
+### 6.4  respond_to_offer — the seller's move.
+# POST /api/mcp {tool:"respond_to_offer", args:{
+#     negotiation_id, action: "accept" | "counter" | "reject",
+#     price?, round_seen, quantity?, freebies?, free_shipping?, message? }}
+# Same applyTurn rules apply (floor, step, round cap, turn order). On accept it
+# returns requires_human_confirmation + confirm_token for the SELLER side —
+# feed that into Phase 4.1 to complete the two-sided confirmation.
+POST {{base}}/api/mcp
+Authorization: Bearer {{stoken}}
+Content-Type: application/json
+
+{ "tool": "respond_to_offer", "args": { "negotiation_id": "{{neg}}", "action": "counter", "price": 60, "round_seen": {{round}} } }
+
+
+##############################################################################
+# PHASE 7 — LLM PROXY   <<<  THIS COSTS OPENAI TOKENS — run last, run once  >>>
+# Everything above proves the system. This proves only the key + HTTP proxy.
+##############################################################################
+
+### 7.1  One raw agent turn.
+# POST /api/agent/turn {messages:[{role,content}], tools:[...]}
+# Server-side call to OpenAI chat/completions at temperature 0 (key stays on
+# the server). Returns {content, toolCalls}. Failure modes:
+#   503 {"error":"agent_upstream"} + backend log "agent turn failed: openai 4xx"
+#     401  -> bad/rotated OPENAI_API_KEY
+#     429 insufficient_quota -> key valid but the OpenAI org has no credit
+#     429 rate_limit -> slow down
+# Fix the key/credit BEFORE touching the agent UI, or every "Start agent"
+# click just burns a failing round-trip.
+POST {{base}}/api/agent/turn
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "messages": [
+    { "role": "system", "content": "You are a buyer agent. Reply with one short sentence." },
+    { "role": "user", "content": "Say hello and stop." }
+  ],
+  "tools": []
+}

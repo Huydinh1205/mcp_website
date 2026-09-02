@@ -13,5 +13,9 @@ public class ProductEntity {
   @Column public String category;
   @Column(name = "shipping_cost") public double shippingCost = 5;
   @Column(name = "image_url") public String imageUrl;
+  @Column(name = "compare_at_price") public Double compareAtPrice;
+  @Column(name = "rating_avg") public double ratingAvg = 0;
+  @Column(name = "rating_count") public int ratingCount = 0;
+  @Column(name = "sold_count") public int soldCount = 0;
   @Column(name = "seller_id", length = 64) public String sellerId;
 }

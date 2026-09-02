@@ -1,0 +1,15 @@
+# Profile: azure — shared Azure SQL database (MCP_Ecommerce).
+# The `dbo` schema on that database already holds a teammate's tables, so this
+# app lives in its OWN schema `mcp`. Every migration qualifies its tables as
+# ${app_schema}.<table>; here app_schema = mcp. Hibernate also reads/writes
+# mcp.*. Activate with SPRING_PROFILES_ACTIVE=azure.
+spring:
+  flyway:
+    schemas: mcp
+    default-schema: mcp
+    create-schemas: true
+    placeholders:
+      app_schema: mcp
+  jpa:
+    properties:
+      hibernate.default_schema: mcp

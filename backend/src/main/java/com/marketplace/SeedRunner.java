@@ -18,10 +18,12 @@ public class SeedRunner implements CommandLineRunner {
   private final BuyerConfigRepo buyerConfigs;
   private final DiscountService discountService;
   private final org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder encoder;
+  private final FeedbackRepo feedback;
+  private final java.util.Random rnd = new java.util.Random(42);
 
   public SeedRunner(UserRepo users, SellerRepo sellers, BuyerRepo buyers, ProductRepo products,
       SellerConfigRepo sellerConfigs, BuyerConfigRepo buyerConfigs, DiscountService discountService,
-      org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder encoder) {
+      org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder encoder, FeedbackRepo feedback) {
     this.users = users;
     this.sellers = sellers;
     this.buyers = buyers;
@@ -30,6 +32,7 @@ public class SeedRunner implements CommandLineRunner {
     this.buyerConfigs = buyerConfigs;
     this.discountService = discountService;
     this.encoder = encoder;
+    this.feedback = feedback;
   }
 
   record S(String id, String first, String last, double rating) {}
@@ -113,10 +116,16 @@ public class SeedRunner implements CommandLineRunner {
         p.gap = item.price() - item.min();
         p.remainings = 10;
         p.category = item.category();
-        p.imageUrl = "https://picsum.photos/seed/"
-            + item.name().toLowerCase().replaceAll("[^a-z0-9]+", "-") + "/600/400";
+        String slug = item.name().toLowerCase().replaceAll("[^a-z0-9]+", "-");
+        p.imageUrl = "https://picsum.photos/seed/" + slug + "/600/450";
+        p.compareAtPrice = (double) Math.round(p.price * (1.18 + rnd.nextDouble() * 0.5));
+        p.ratingCount = 25 + rnd.nextInt(2400);
+        p.soldCount = p.ratingCount * (3 + rnd.nextInt(9));
+        p.ratingAvg = Math.round((4.0 + rnd.nextDouble() * 0.95) * 10) / 10.0;
+        if (rnd.nextInt(10) < 4) p.shippingCost = 0; // ~40% free shipping
         p.sellerId = sellerId;
         products.save(p);
+        seedReviews(p);
         SellerAiConfigEntity cfg = new SellerAiConfigEntity();
         cfg.agentId = UUID.randomUUID().toString().replace("-", "");
         cfg.productId = p.productId;
@@ -136,5 +145,39 @@ public class SeedRunner implements CommandLineRunner {
     System.out.printf("seeded: sellers=%d buyers=%d products=%d coupons=3 "
         + "(logins: <firstname>@example.com / password)%n",
         sellers.count(), buyers.count(), products.count());
+  }
+
+  private static final String[] NAMES = {
+      "Mai T.", "Long P.", "An N.", "Huy D.", "Linh V.", "Quan H.", "Thao L.",
+      "Duc M.", "Chris W.", "Sara K.", "Tom B.", "Priya S.", "Kenji I.", "Ana R."
+  };
+  private static final String[] GOOD = {
+      "Exactly as described, shipped fast.", "Great value for the price.",
+      "Build quality better than I expected.", "Would buy again. Recommended.",
+      "Packaging was solid, no damage.", "Works perfectly out of the box.",
+      "My second one from this seller — consistent.", "Feels premium, happy with it."
+  };
+  private static final String[] MEH = {
+      "Fine but nothing special.", "Took a while to arrive.",
+      "OK for the price, minor scuffs.", "Does the job, packaging was thin."
+  };
+
+  private void seedReviews(ProductEntity p) {
+    int n = Math.min(12, Math.max(2, p.ratingCount / 300 + rnd.nextInt(4)));
+    var now = java.time.Instant.now();
+    for (int i = 0; i < n; i++) {
+      FeedbackEntity f = new FeedbackEntity();
+      f.feedbackId = UUID.randomUUID().toString().replace("-", "");
+      f.productId = p.productId;
+      f.negotiationId = "seed";
+      f.buyerId = "seed";
+      f.reviewerName = NAMES[rnd.nextInt(NAMES.length)];
+      f.verified = rnd.nextInt(10) < 9;
+      boolean happy = rnd.nextInt(10) < 8;
+      f.ratingScore = happy ? 4 + rnd.nextInt(2) : 2 + rnd.nextInt(2);
+      f.comment = happy ? GOOD[rnd.nextInt(GOOD.length)] : MEH[rnd.nextInt(MEH.length)];
+      f.createdAt = now.minus(1L + rnd.nextInt(120), java.time.temporal.ChronoUnit.DAYS);
+      feedback.save(f);
+    }
   }
 }

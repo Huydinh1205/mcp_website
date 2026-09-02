@@ -96,6 +96,22 @@ class CatalogAndDealsTest {
   }
 
   @Test
+  void productDetailSplitsReviewsPerShopAndMergesAcrossShops() throws Exception {
+    String id = pid("65% Mechanical Keyboard"); // seeded with 2 sellers
+    mvc.perform(get("/api/products/" + id))
+        .andExpect(status().isOk())
+        // every shop row carries its own rating summary + review list
+        .andExpect(jsonPath("$.sellers.length()").value(org.hamcrest.Matchers.greaterThan(1)))
+        .andExpect(jsonPath("$.sellers[0].reviews").isArray())
+        .andExpect(jsonPath("$.sellers[0].rating_avg").exists())
+        .andExpect(jsonPath("$.sellers[0].rating_breakdown").isArray())
+        .andExpect(jsonPath("$.sellers[1].reviews").isArray())
+        // top-level reviews are merged across shops and tagged with the shop
+        .andExpect(jsonPath("$.reviews[0].seller_name").exists())
+        .andExpect(jsonPath("$.rating_breakdown").isArray());
+  }
+
+  @Test
   void feedbackRejectedBeforePurchase() throws Exception {
     String pid = pid("Desk Mat XL");
     String st = body(mvc.perform(post("/api/mcp").with(buyer(jwt, "B-003")).contentType("application/json")

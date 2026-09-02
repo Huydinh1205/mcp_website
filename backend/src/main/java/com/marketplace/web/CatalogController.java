@@ -25,8 +25,9 @@ public class CatalogController {
       @RequestParam(defaultValue = "") String q,
       @RequestParam(required = false) String category,
       @RequestParam(required = false) Double maxPrice,
-      @RequestParam(required = false) Double minRating) {
-    return reads.searchProducts(q, maxPrice, minRating, category);
+      @RequestParam(required = false) Double minRating,
+      @RequestParam(required = false) String sort) {
+    return reads.searchProducts(q, maxPrice, minRating, category, sort);
   }
 
   @GetMapping("/api/categories")
@@ -36,9 +37,9 @@ public class CatalogController {
 
   @GetMapping("/api/products/{id}")
   public ResponseEntity<?> product(@PathVariable String id) {
-    var d = reads.productDetail(id, feedback::avgRating, feedback::reviewsFor);
-    return d == null ? ResponseEntity.status(404).body(Map.of("error", "NOT_FOUND"))
-        : ResponseEntity.ok(d);
+    var d = reads.productDetail(id, feedback::avgRating, feedback::reviewsFor, feedback::breakdown);
+    if (d == null) return ResponseEntity.status(404).body(Map.of("error", "NOT_FOUND"));
+    return ResponseEntity.ok(d);
   }
 
   @PostMapping("/api/feedback")

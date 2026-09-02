@@ -31,7 +31,7 @@ public class SecurityConfig {
         .authorizeHttpRequests(a -> a
             .requestMatchers("/api/auth/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories").permitAll()
-            .requestMatchers("/error").permitAll()
+            .requestMatchers("/error", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
             .anyRequest().authenticated())
         .exceptionHandling(e -> e.authenticationEntryPoint(
             (req, res, ex) -> res.sendError(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED)))

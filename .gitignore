@@ -37,3 +37,7 @@ TODOS.md
 
 .env*
 /specs
+
+# maven
+target/
+!.mvn/wrapper/maven-wrapper.jar

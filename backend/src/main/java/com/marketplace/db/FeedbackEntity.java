@@ -11,5 +11,7 @@ public class FeedbackEntity {
   @Column(name = "buyer_id", length = 64) public String buyerId;
   @Column(name = "rating_score") public int ratingScore;
   @Column public String comment;
+  @Column(name = "reviewer_name") public String reviewerName;
+  @Column public boolean verified = true;
   @Column(name = "created_at") public Instant createdAt = Instant.now();
 }
