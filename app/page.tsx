@@ -67,8 +67,8 @@ export default function Home() {
         <div className="homehero__text">
           <h1>Shop smarter with an AI agent that haggles for you</h1>
           <p>
-            Buy now at list price, or send an agent to negotiate the real deal — price, quantity,
-            free add-ons, free shipping and coupons. You confirm every order.
+            Add to cart at list price and check out, or send an agent to negotiate the real deal —
+            price, quantity, free add-ons, free shipping and coupons. You confirm every order.
           </p>
           <div className="homehero__cta">
             <Link href="/catalog" className="btn">Browse catalog</Link>
@@ -78,8 +78,8 @@ export default function Home() {
           </div>
         </div>
         <div className="homehero__cards">
-          <div className="wcard"><Icon name="bolt" size={20} /><b>Buy now</b><span>list price, instant order</span></div>
-          <div className="wcard"><Icon name="cart" size={20} /><b>Add to cart</b><span>check out several at once</span></div>
+          <div className="wcard"><Icon name="cart" size={20} /><b>Add to cart</b><span>at list price</span></div>
+          <div className="wcard"><Icon name="bolt" size={20} /><b>Checkout</b><span>orders + delivery tracking</span></div>
           <div className="wcard"><Icon name="handshake" size={20} /><b>Negotiate</b><span>agent haggles, you confirm</span></div>
         </div>
       </section>

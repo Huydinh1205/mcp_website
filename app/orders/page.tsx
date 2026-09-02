@@ -67,8 +67,7 @@ export default function OrdersPage() {
         <p className="muted">Loading…</p>
       ) : orders.length === 0 ? (
         <p className="muted">
-          No orders yet. <Link href="/catalog">Browse the catalog</Link> — buy now, or send an
-          agent to negotiate.
+          No orders yet. <Link href="/catalog">Browse the catalog</Link> — add to cart, or send an agent to negotiate.
         </p>
       ) : (
         <div className="olist">

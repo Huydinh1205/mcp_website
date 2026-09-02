@@ -10,9 +10,8 @@ import { useAuth } from "@/lib/auth";
 import { Stars } from "@/app/components/Stars";
 import { Icon } from "@/app/components/Icon";
 import { compact, money, ago } from "@/lib/format";
-import { buyNow } from "@/lib/orders";
 import { addToCart } from "@/lib/cart";
-import { toast, toastErr } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import { useWishlist, toggleWishlist } from "@/lib/wishlist";
 import { Skeleton } from "@/app/components/Skeleton";
 
@@ -108,7 +107,6 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const [shopStar, setShopStar] = useState<Record<string, number>>({});
   const [qty, setQty] = useState(1);
   const [gimg, setGimg] = useState(0);
-  const [buying, setBuying] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/products/${encodeURIComponent(id)}`)
@@ -162,20 +160,6 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     if (!needBuyer()) return;
     const goal = `Negotiate the best deal for "${d.name}" from ${s.seller_name} (listed ${s.price}), quantity ${qty}. Use quantity, free add-ons, free shipping and coupons where they help.`;
     router.push(`/agent?goal=${encodeURIComponent(goal)}`);
-  };
-
-  const buy = async (productId: string) => {
-    if (!needBuyer()) return;
-    setBuying(productId);
-    try {
-      const r = await buyNow(productId, qty);
-      toast(`Order #${r.order_id} placed · $${money(r.total)}`, "success");
-      router.push("/orders");
-    } catch (e) {
-      toastErr(e instanceof Error ? e.message : "Buy failed");
-    } finally {
-      setBuying(null);
-    }
   };
 
   const addCart = (s: SellerRow) => {
@@ -276,12 +260,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               <input type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))} />
               <button type="button" onClick={() => setQty((q) => q + 1)}>+</button>
             </label>
-            <button className="buynow" disabled={buying === d.product_id} onClick={() => buy(d.product_id)}>
-              <Icon name="bolt" size={15} />
-              {buying === d.product_id ? "Placing…" : `Buy now · $${money(d.price * qty)}`}
-            </button>
-            <button className="secondary" onClick={() => addCart(d.sellers[0])}>
-              <Icon name="cart" size={15} /> Add to cart
+            <button className="buynow" onClick={() => addCart(d.sellers[0])}>
+              <Icon name="cart" size={15} /> Add to cart · ${money(d.price * qty)}
             </button>
             <button className="secondary" onClick={() => negotiate(d.sellers[0])}>
               <Icon name="handshake" size={15} /> Negotiate
@@ -292,8 +272,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             <p className="pdp__desc">{d.description}</p>
           ) : (
             <p className="muted small">
-              Buy now at list price, or send an agent to a shop below to negotiate (quantity,
-              freebies, free shipping, coupons).
+              Add to cart at list price, or send an agent to a shop below to negotiate (quantity, freebies, free shipping, coupons).
             </p>
           )}
         </div>
@@ -322,10 +301,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 </div>
                 <div className="shoprow__right">
                   <span className="shoprow__price">${money(s.price)}</span>
-                  <button className="buynow" disabled={buying === s.product_id} onClick={() => buy(s.product_id)}>
-                    {buying === s.product_id ? "…" : "Buy now"}
+                  <button className="buynow" onClick={() => addCart(s)}>
+                    <Icon name="cart" size={14} /> Add to cart
                   </button>
-                  <button className="secondary" onClick={() => addCart(s)}>Add to cart</button>
                   <button className="secondary" onClick={() => negotiate(s)}>
                     {user?.role === "buyer" ? "Negotiate" : "Log in"}
                   </button>

@@ -101,7 +101,7 @@ export default function AccountPage() {
       </form>
 
       <p className="muted small">
-        This address is used as the delivery destination when you buy now or check out a cart.
+        This address is used as the delivery destination when you check out your cart.
       </p>
     </main>
   );

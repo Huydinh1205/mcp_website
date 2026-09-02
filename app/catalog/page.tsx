@@ -145,8 +145,7 @@ export default function CatalogPage() {
         <div>
           <h1 className="hero__title">Catalog</h1>
           <p className="hero__sub">
-            {loading ? "Loading…" : `${cards.length}+ products`} · buy now, add to cart, or send an
-            agent to negotiate.
+            {loading ? "Loading…" : `${cards.length}+ products`} · add to cart, or send an agent to negotiate.
           </p>
         </div>
         <div className="searchbar">
