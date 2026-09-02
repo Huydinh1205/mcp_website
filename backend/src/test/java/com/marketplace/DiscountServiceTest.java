@@ -54,16 +54,16 @@ class DiscountServiceTest {
   @Test
   void appliesTo_productSellerOrGlobal() {
     DiscountEntity forProduct = d(0.1, null);
-    forProduct.productId = "P1";
-    assertThat(svc.appliesTo(forProduct, "P1", "S1")).isTrue();
-    assertThat(svc.appliesTo(forProduct, "P2", "S1")).isFalse();
+    forProduct.productId = 1L;
+    assertThat(svc.appliesTo(forProduct, 1L, 10L)).isTrue();
+    assertThat(svc.appliesTo(forProduct, 2L, 10L)).isFalse();
 
     DiscountEntity forSeller = d(0.1, null);
-    forSeller.sellerId = "S1";
-    assertThat(svc.appliesTo(forSeller, "Pany", "S1")).isTrue();
-    assertThat(svc.appliesTo(forSeller, "Pany", "S2")).isFalse();
+    forSeller.sellerId = 10L;
+    assertThat(svc.appliesTo(forSeller, 99L, 10L)).isTrue();
+    assertThat(svc.appliesTo(forSeller, 99L, 20L)).isFalse();
 
     DiscountEntity global = d(0.1, null);
-    assertThat(svc.appliesTo(global, "Pany", "Sany")).isTrue();
+    assertThat(svc.appliesTo(global, 99L, 88L)).isTrue();
   }
 }
