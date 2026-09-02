@@ -41,8 +41,16 @@ public class SecurityConfig {
 
   private CorsConfigurationSource corsSource(AppProps props) {
     CorsConfiguration c = new CorsConfiguration();
-    c.setAllowedOrigins(java.util.List.of(
-        props.corsOrigin() == null ? "http://localhost:3000" : props.corsOrigin()));
+    String origin = props.corsOrigin() == null || props.corsOrigin().isBlank()
+        ? "http://localhost:3000" : props.corsOrigin().trim();
+    if (origin.contains("*")) {
+      // dev / LAN / tunnel access. JWT lives in the Authorization header, no
+      // cookies, so a wildcard origin is safe here.
+      c.setAllowedOriginPatterns(java.util.List.of("*"));
+    } else {
+      c.setAllowedOrigins(java.util.Arrays.stream(origin.split(","))
+          .map(String::trim).filter(s -> !s.isEmpty()).toList());
+    }
     c.setAllowedMethods(java.util.List.of("GET", "POST", "OPTIONS"));
     c.setAllowedHeaders(java.util.List.of("*"));
     var src = new UrlBasedCorsConfigurationSource();
