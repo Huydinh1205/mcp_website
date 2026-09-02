@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface NegotiationRoundRepo
     extends JpaRepository<NegotiationRoundEntity, NegotiationRoundId> {
-  List<NegotiationRoundEntity> findByNegotiationIdOrderByRoundNumberAsc(String negotiationId);
+  List<NegotiationRoundEntity> findByNegotiationIdOrderByRoundNumberAsc(Long negotiationId);
 }

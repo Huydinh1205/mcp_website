@@ -1,12 +1,11 @@
 package com.marketplace.auth;
 
 import com.marketplace.db.*;
-import java.util.UUID;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Register / login. Passwords are BCrypt-hashed; login returns a JWT. */
+/** Register / login against the shared schema's [User]/[Buyer]/[Seller]. */
 @Service
 public class AuthService {
 
@@ -39,38 +38,38 @@ public class AuthService {
     if (users.findByEmailIgnoreCase(email).isPresent())
       return new RegisterResult(null, null, null, "EMAIL_TAKEN");
 
-    String[] parts = name == null || name.isBlank() ? new String[] {"New", "User"} : name.trim().split("\\s+", 2);
-    String id = UUID.randomUUID().toString().replace("-", "");
+    String[] parts = name == null || name.isBlank()
+        ? new String[] {"New", "User"} : name.trim().split("\\s+", 2);
 
     UserEntity u = new UserEntity();
-    u.nationalId = id;
     u.firstName = parts[0];
     u.lastName = parts.length > 1 ? parts[1] : "";
     u.email = email;
     u.role = role;
     u.passwordHash = encoder.encode(password);
-    users.save(u);
+    users.save(u);                       // id assigned by IDENTITY
 
     if ("buyer".equals(role)) {
       BuyerEntity b = new BuyerEntity();
-      b.nationalId = id;
+      b.id = u.id;
       b.interest = "";
       buyers.save(b);
       BuyerAiConfigEntity cfg = new BuyerAiConfigEntity();
-      cfg.buyerAgentId = UUID.randomUUID().toString().replace("-", "");
-      cfg.nationalId = id;
+      cfg.buyerId = u.id;
       cfg.maxBudget = 200;
       cfg.targetPrice = 120;
       cfg.minSellerRating = 0;
-      cfg.style = "fair";
+      cfg.style = "MODERATE";
       buyerConfigs.save(cfg);
     } else {
       SellerEntity s = new SellerEntity();
-      s.nationalId = id;
+      s.id = u.id;
       s.rating = 4.0;
+      s.tradingName = (parts[0] + " " + (parts.length > 1 ? parts[1] : "")).trim();
       sellers.save(s);
     }
 
+    String id = String.valueOf(u.id);
     return new RegisterResult(id, jwt.mint(id, role), role, null);
   }
 
@@ -78,6 +77,9 @@ public class AuthService {
     var u = email == null ? null : users.findByEmailIgnoreCase(email).orElse(null);
     if (u == null || u.passwordHash == null || !encoder.matches(password, u.passwordHash))
       return new LoginResult(null, null, null, "BAD_CREDENTIALS");
-    return new LoginResult(u.nationalId, jwt.mint(u.nationalId, u.role), u.role, null);
+    if (u.role == null)
+      return new LoginResult(null, null, null, "NO_ROLE");
+    String id = String.valueOf(u.id);
+    return new LoginResult(id, jwt.mint(id, u.role), u.role, null);
   }
 }

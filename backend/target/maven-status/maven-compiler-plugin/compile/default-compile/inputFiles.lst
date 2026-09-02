@@ -16,7 +16,6 @@
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/auth/JwtService.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/auth/SecurityConfig.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/AppliedDiscountEntity.java
-/Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/AppliedDiscountId.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/AppliedDiscountRepo.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/BuyerAiConfigEntity.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/BuyerConfigRepo.java
@@ -26,6 +25,9 @@
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/DiscountRepo.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/FeedbackEntity.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/FeedbackRepo.java
+/Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/InvoiceEntity.java
+/Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/InvoiceRepo.java
+/Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/LowercaseConverter.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/NegotiationEntity.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/NegotiationRepo.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/NegotiationRoundEntity.java

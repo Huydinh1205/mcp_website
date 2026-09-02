@@ -1,21 +1,21 @@
-CREATE TABLE ${app_schema}.[users] (
+CREATE TABLE [users] (
   national_id NVARCHAR(64)  NOT NULL PRIMARY KEY,
   first_name  NVARCHAR(255) NOT NULL,
   last_name   NVARCHAR(255) NOT NULL,
   email       NVARCHAR(320) NOT NULL
 );
 
-CREATE TABLE ${app_schema}.sellers (
+CREATE TABLE sellers (
   national_id NVARCHAR(64) NOT NULL PRIMARY KEY,
   rating      FLOAT        NOT NULL DEFAULT 0
 );
 
-CREATE TABLE ${app_schema}.buyers (
+CREATE TABLE buyers (
   national_id NVARCHAR(64)   NOT NULL PRIMARY KEY,
   interest    NVARCHAR(1000) NULL
 );
 
-CREATE TABLE ${app_schema}.products (
+CREATE TABLE products (
   product_id NVARCHAR(64)  NOT NULL PRIMARY KEY,
   name       NVARCHAR(255) NOT NULL,
   price      FLOAT         NOT NULL,
@@ -25,14 +25,14 @@ CREATE TABLE ${app_schema}.products (
   seller_id  NVARCHAR(64)  NOT NULL
 );
 
-CREATE TABLE ${app_schema}.seller_ai_configs (
+CREATE TABLE seller_ai_configs (
   agent_id          NVARCHAR(64) NOT NULL PRIMARY KEY,
   auto_accept_price FLOAT        NOT NULL,
   max_discount_step FLOAT        NOT NULL,
   product_id        NVARCHAR(64) NOT NULL UNIQUE
 );
 
-CREATE TABLE ${app_schema}.buyer_ai_configs (
+CREATE TABLE buyer_ai_configs (
   buyer_agent_id    NVARCHAR(64) NOT NULL PRIMARY KEY,
   max_budget        FLOAT        NOT NULL,
   target_price      FLOAT        NOT NULL,
@@ -42,7 +42,7 @@ CREATE TABLE ${app_schema}.buyer_ai_configs (
   national_id       NVARCHAR(64) NOT NULL UNIQUE
 );
 
-CREATE TABLE ${app_schema}.negotiations (
+CREATE TABLE negotiations (
   negotiation_id NVARCHAR(64) NOT NULL PRIMARY KEY,
   status         NVARCHAR(30) NOT NULL DEFAULT 'open',
   last_actor     NVARCHAR(10) NULL,
@@ -57,7 +57,7 @@ CREATE TABLE ${app_schema}.negotiations (
   order_id       NVARCHAR(64) NULL
 );
 
-CREATE TABLE ${app_schema}.negotiation_rounds (
+CREATE TABLE negotiation_rounds (
   negotiation_id  NVARCHAR(64)   NOT NULL,
   round_number    INT            NOT NULL,
   proposed_price  FLOAT          NOT NULL,
@@ -66,7 +66,7 @@ CREATE TABLE ${app_schema}.negotiation_rounds (
   CONSTRAINT pk_negotiation_rounds PRIMARY KEY (negotiation_id, round_number)
 );
 
-CREATE TABLE ${app_schema}.[orders] (
+CREATE TABLE [orders] (
   order_id            NVARCHAR(64) NOT NULL PRIMARY KEY,
   status              NVARCHAR(20) NOT NULL DEFAULT 'pending',
   order_date          DATETIME2    NOT NULL DEFAULT SYSUTCDATETIME(),
@@ -74,6 +74,6 @@ CREATE TABLE ${app_schema}.[orders] (
   seller_confirmed_at DATETIME2    NULL
 );
 
-CREATE INDEX ix_negotiations_national ON ${app_schema}.negotiations(national_id);
-CREATE INDEX ix_negotiations_product  ON ${app_schema}.negotiations(product_id);
-CREATE INDEX ix_products_seller       ON ${app_schema}.products(seller_id);
+CREATE INDEX ix_negotiations_national ON negotiations(national_id);
+CREATE INDEX ix_negotiations_product  ON negotiations(product_id);
+CREATE INDEX ix_products_seller       ON products(seller_id);

@@ -1,19 +1,19 @@
 package com.marketplace.db;
 
+import java.time.Instant;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import java.time.Instant;
 
-public interface NegotiationRepo extends JpaRepository<NegotiationEntity, String> {
-  List<NegotiationEntity> findByNationalId(String nationalId);
+public interface NegotiationRepo extends JpaRepository<NegotiationEntity, Long> {
+  List<NegotiationEntity> findByBuyerId(Long buyerId);
 
-  List<NegotiationEntity> findByProductIdInAndStatusIn(List<String> productIds, List<String> statuses);
+  List<NegotiationEntity> findByProductIdInAndStatusIn(List<Long> productIds, List<String> statuses);
 
-  List<NegotiationEntity> findByNationalIdAndProductIdAndStatusIn(
-      String nationalId, String productId, List<String> statuses);
+  List<NegotiationEntity> findByBuyerIdAndProductIdAndStatusIn(
+      Long buyerId, Long productId, List<String> statuses);
 
   /** Optimistic write: only the row still at :expected is touched. Returns affected rows. */
   @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -27,11 +27,11 @@ public interface NegotiationRepo extends JpaRepository<NegotiationEntity, String
              n.currentFreeShipping = :freeShip,
              n.quantity = :qty,
              n.updatedAt = :now
-       where n.negotiationId = :id
+       where n.id = :id
          and n.currentRound = :expected
       """)
   int applyTurn(
-      @Param("id") String id,
+      @Param("id") Long id,
       @Param("now") Instant now,
       @Param("expected") int expected,
       @Param("status") String status,

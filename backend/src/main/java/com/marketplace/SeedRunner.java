@@ -1,183 +1,113 @@
 package com.marketplace;
 
 import com.marketplace.db.*;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.UUID;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
-/** Populates demo data on first boot (when the users table is empty). Port of prisma/seed.ts. */
+/**
+ * Shared DB already holds ~95k products / 100 buyers / 31 sellers. We only add:
+ *  - 3 demo login accounts (thanh's users have unknown password hashes)
+ *  - a "demo shop" that owns a handful of products, dressed with storefront
+ *    fields (category / image / ratings) so the catalog looks real
+ *  - a couple of coupons in [App_Coupon]
+ * Runs once (guarded by the demo buyer's presence).
+ */
 @Component
 public class SeedRunner implements CommandLineRunner {
 
   private final UserRepo users;
-  private final SellerRepo sellers;
   private final BuyerRepo buyers;
-  private final ProductRepo products;
-  private final SellerConfigRepo sellerConfigs;
+  private final SellerRepo sellers;
   private final BuyerConfigRepo buyerConfigs;
-  private final DiscountService discountService;
-  private final org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder encoder;
-  private final FeedbackRepo feedback;
-  private final java.util.Random rnd = new java.util.Random(42);
+  private final ProductRepo products;
+  private final DiscountRepo coupons;
+  private final BCryptPasswordEncoder encoder;
 
-  public SeedRunner(UserRepo users, SellerRepo sellers, BuyerRepo buyers, ProductRepo products,
-      SellerConfigRepo sellerConfigs, BuyerConfigRepo buyerConfigs, DiscountService discountService,
-      org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder encoder, FeedbackRepo feedback) {
+  public SeedRunner(UserRepo users, BuyerRepo buyers, SellerRepo sellers,
+      BuyerConfigRepo buyerConfigs, ProductRepo products, DiscountRepo coupons,
+      BCryptPasswordEncoder encoder) {
     this.users = users;
-    this.sellers = sellers;
     this.buyers = buyers;
-    this.products = products;
-    this.sellerConfigs = sellerConfigs;
+    this.sellers = sellers;
     this.buyerConfigs = buyerConfigs;
-    this.discountService = discountService;
+    this.products = products;
+    this.coupons = coupons;
     this.encoder = encoder;
-    this.feedback = feedback;
   }
-
-  record S(String id, String first, String last, double rating) {}
-  record B(String id, String first, String last, double budget, double target, double minRating,
-      String style, String interest) {}
-  record C(String name, String category, double price, double min, double auto, double step, List<String> sellers) {}
 
   @Override
+  @Transactional
   public void run(String... args) {
-    if (users.count() > 0) return;
+    if (users.findByEmailIgnoreCase("mai.demo@example.com").isPresent()) return;
 
-    var SELLERS = List.of(
-        new S("S-001", "KeyLab", "Store", 4.7),
-        new S("S-002", "Nordic", "Desk", 4.4),
-        new S("S-003", "Budget", "Peripherals", 3.9),
-        new S("S-004", "Aurora", "Audio", 4.8),
-        new S("S-005", "CablePit", "Supply", 4.1));
+    String pw = encoder.encode("password");
+    Long maiId = newBuyer("Mai", "Tran", "mai.demo@example.com", pw, "mechanical keyboards");
+    Long longId = newBuyer("Long", "Pham", "long.demo@example.com", pw, "audio");
+    Long shopId = newSeller("KeyLab", "Store", "keylab.demo@example.com", pw);
 
-    for (var s : SELLERS) {
-      UserEntity u = new UserEntity();
-      u.nationalId = s.id(); u.firstName = s.first(); u.lastName = s.last();
-      u.email = s.first().toLowerCase() + "@example.com";
-      u.role = "seller";
-      u.passwordHash = encoder.encode("password");
-      users.save(u);
-      SellerEntity se = new SellerEntity();
-      se.nationalId = s.id(); se.rating = s.rating();
-      sellers.save(se);
-    }
-
-    var BUYERS = List.of(
-        new B("B-001", "Mai", "Tran", 60, 46, 4.0, "aggressive", "mechanical keyboards"),
-        new B("B-002", "Long", "Pham", 130, 100, 4.3, "fair", "wireless keyboards and audio"),
-        new B("B-003", "An", "Nguyen", 30, 18, 3.5, "quick", "cables and accessories"));
-
-    for (var b : BUYERS) {
-      UserEntity u = new UserEntity();
-      u.nationalId = b.id(); u.firstName = b.first(); u.lastName = b.last();
-      u.email = b.first().toLowerCase() + "@example.com";
-      u.role = "buyer";
-      u.passwordHash = encoder.encode("password");
-      users.save(u);
-      BuyerEntity be = new BuyerEntity();
-      be.nationalId = b.id(); be.interest = b.interest();
-      buyers.save(be);
-      BuyerAiConfigEntity cfg = new BuyerAiConfigEntity();
-      cfg.buyerAgentId = UUID.randomUUID().toString().replace("-", "");
-      cfg.nationalId = b.id(); cfg.maxBudget = b.budget(); cfg.targetPrice = b.target();
-      cfg.minSellerRating = b.minRating(); cfg.style = b.style();
-      buyerConfigs.save(cfg);
-    }
-
-    var CATALOG = List.of(
-        new C("65% Mechanical Keyboard", "Keyboards", 79, 44, 58, 8, List.of("S-001", "S-002", "S-003")),
-        new C("75% Wireless Keyboard", "Keyboards", 119, 74, 95, 10, List.of("S-001", "S-002")),
-        new C("Low-Profile Keyboard", "Keyboards", 99, 60, 80, 9, List.of("S-001", "S-003")),
-        new C("USB-C Coiled Cable", "Cables", 25, 9, 15, 3, List.of("S-005", "S-003")),
-        new C("Aluminium Keyboard Case", "Keyboards", 45, 26, 34, 5, List.of("S-002")),
-        new C("PBT Keycap Set", "Keyboards", 55, 30, 42, 6, List.of("S-001", "S-003")),
-        new C("Desk Mat XL", "Accessories", 30, 14, 20, 4, List.of("S-002", "S-005")),
-        new C("Switch Sample Pack", "Keyboards", 12, 5, 8, 2, List.of("S-003")),
-        new C("Studio Headphones", "Audio", 149, 95, 120, 12, List.of("S-004")),
-        new C("USB DAC", "Audio", 89, 52, 70, 9, List.of("S-004")),
-        new C("Boom Arm", "Audio", 65, 38, 50, 6, List.of("S-004", "S-005")),
-        new C("Braided HDMI Cable", "Cables", 18, 7, 12, 2, List.of("S-005")),
-        new C("Cable Management Tray", "Cables", 22, 10, 16, 3, List.of("S-005", "S-002")),
-        new C("Palm Rest", "Keyboards", 35, 18, 26, 4, List.of("S-001")),
-        new C("Numpad Module", "Keyboards", 49, 28, 38, 5, List.of("S-003")),
-        new C("Travel Keyboard Bag", "Keyboards", 40, 22, 30, 5, List.of("S-002")));
-
-    for (var item : CATALOG) {
-      for (String sellerId : item.sellers()) {
-        int idx = -1;
-        for (int i = 0; i < SELLERS.size(); i++) if (SELLERS.get(i).id().equals(sellerId)) idx = i;
-        double jitter = 1 + (idx - 2) * 0.03;
-        ProductEntity p = new ProductEntity();
-        p.productId = UUID.randomUUID().toString().replace("-", "");
-        p.name = item.name();
-        p.price = Math.round(item.price() * jitter);
-        p.minPrice = item.min();
-        p.gap = item.price() - item.min();
-        p.remainings = 10;
-        p.category = item.category();
-        String slug = item.name().toLowerCase().replaceAll("[^a-z0-9]+", "-");
-        p.imageUrl = "https://picsum.photos/seed/" + slug + "/600/450";
-        p.compareAtPrice = (double) Math.round(p.price * (1.18 + rnd.nextDouble() * 0.5));
-        p.ratingCount = 25 + rnd.nextInt(2400);
-        p.soldCount = p.ratingCount * (3 + rnd.nextInt(9));
-        p.ratingAvg = Math.round((4.0 + rnd.nextDouble() * 0.95) * 10) / 10.0;
-        if (rnd.nextInt(10) < 4) p.shippingCost = 0; // ~40% free shipping
-        p.sellerId = sellerId;
-        products.save(p);
-        seedReviews(p);
-        SellerAiConfigEntity cfg = new SellerAiConfigEntity();
-        cfg.agentId = UUID.randomUUID().toString().replace("-", "");
-        cfg.productId = p.productId;
-        cfg.autoAcceptPrice = item.auto();
-        cfg.maxDiscountStep = item.step();
-        sellerConfigs.save(cfg);
+    // dress up a demo shopfront: reassign the first products to the demo seller
+    String[] cats = {"Sleepwear", "Loungewear", "Robes", "Pajamas"};
+    var page = products.findByNameContainingIgnoreCase("", PageRequest.of(0, 12));
+    int i = 0;
+    for (ProductEntity p : page) {
+      p.sellerId = shopId;
+      p.category = cats[i % cats.length];
+      p.imageUrl = "https://picsum.photos/seed/keylab" + p.id + "/500/600";
+      if (p.compareAtPrice == null || p.compareAtPrice <= p.price) {
+        p.compareAtPrice = Math.round(p.price * 1.35 * 100.0) / 100.0;
       }
+      if (p.ratingAvg <= 0) p.ratingAvg = 4.2 + (i % 6) * 0.12;
+      if (p.ratingCount <= 0) p.ratingCount = 40 + i * 17;
+      if (p.soldCount <= 0) p.soldCount = p.ratingCount * 6;
+      products.save(p);
+      i++;
     }
 
-    var now = java.time.Instant.now();
-    var start = now.minus(1, java.time.temporal.ChronoUnit.DAYS);
-    var end = now.plus(30, java.time.temporal.ChronoUnit.DAYS);
-    discountService.seedDiscount("WELCOME10", "10% off your first deal", 0.10, null, null, null, start, end);
-    discountService.seedDiscount("KEYLAB5", "5 off, KeyLab Store", null, 5.0, null, "S-001", start, end);
-    discountService.seedDiscount("AUDIO15", "15% off Aurora Audio", 0.15, null, null, "S-004", start, end);
+    Instant now = Instant.now();
+    Instant end = now.plus(365, ChronoUnit.DAYS);
+    coupon("WELCOME10", "10% off your first deal", 0.10, null, null, null, now, end);
+    coupon("KEYLAB5", "$5 off KeyLab Store", null, 5.0, null, shopId, now, end);
+    coupon("DEAL15", "15% off (demo shop)", 0.15, null, null, shopId, now, end);
 
-    System.out.printf("seeded: sellers=%d buyers=%d products=%d coupons=3 "
-        + "(logins: <firstname>@example.com / password)%n",
-        sellers.count(), buyers.count(), products.count());
+    System.out.printf("seeded: demo buyers=%d,%d demo shop=%d, %d products dressed, 3 coupons%n",
+        maiId, longId, shopId, i);
   }
 
-  private static final String[] NAMES = {
-      "Mai T.", "Long P.", "An N.", "Huy D.", "Linh V.", "Quan H.", "Thao L.",
-      "Duc M.", "Chris W.", "Sara K.", "Tom B.", "Priya S.", "Kenji I.", "Ana R."
-  };
-  private static final String[] GOOD = {
-      "Exactly as described, shipped fast.", "Great value for the price.",
-      "Build quality better than I expected.", "Would buy again. Recommended.",
-      "Packaging was solid, no damage.", "Works perfectly out of the box.",
-      "My second one from this seller — consistent.", "Feels premium, happy with it."
-  };
-  private static final String[] MEH = {
-      "Fine but nothing special.", "Took a while to arrive.",
-      "OK for the price, minor scuffs.", "Does the job, packaging was thin."
-  };
+  private Long newBuyer(String first, String last, String email, String pw, String interest) {
+    UserEntity u = new UserEntity();
+    u.firstName = first; u.lastName = last; u.email = email; u.passwordHash = pw; u.role = "buyer";
+    users.save(u);
+    BuyerEntity b = new BuyerEntity();
+    b.id = u.id; b.interest = interest;
+    buyers.save(b);
+    BuyerAiConfigEntity cfg = new BuyerAiConfigEntity();
+    cfg.buyerId = u.id; cfg.maxBudget = 200; cfg.targetPrice = 120; cfg.minSellerRating = 0;
+    cfg.style = "MODERATE";
+    buyerConfigs.save(cfg);
+    return u.id;
+  }
 
-  private void seedReviews(ProductEntity p) {
-    int n = Math.min(12, Math.max(2, p.ratingCount / 300 + rnd.nextInt(4)));
-    var now = java.time.Instant.now();
-    for (int i = 0; i < n; i++) {
-      FeedbackEntity f = new FeedbackEntity();
-      f.feedbackId = UUID.randomUUID().toString().replace("-", "");
-      f.productId = p.productId;
-      f.negotiationId = "seed";
-      f.buyerId = "seed";
-      f.reviewerName = NAMES[rnd.nextInt(NAMES.length)];
-      f.verified = rnd.nextInt(10) < 9;
-      boolean happy = rnd.nextInt(10) < 8;
-      f.ratingScore = happy ? 4 + rnd.nextInt(2) : 2 + rnd.nextInt(2);
-      f.comment = happy ? GOOD[rnd.nextInt(GOOD.length)] : MEH[rnd.nextInt(MEH.length)];
-      f.createdAt = now.minus(1L + rnd.nextInt(120), java.time.temporal.ChronoUnit.DAYS);
-      feedback.save(f);
-    }
+  private Long newSeller(String first, String last, String email, String pw) {
+    UserEntity u = new UserEntity();
+    u.firstName = first; u.lastName = last; u.email = email; u.passwordHash = pw; u.role = "seller";
+    users.save(u);
+    SellerEntity s = new SellerEntity();
+    s.id = u.id; s.rating = 4.7; s.totalRatings = 120; s.tradingName = "KeyLab Store";
+    sellers.save(s);
+    return u.id;
+  }
+
+  private void coupon(String code, String label, Double pct, Double amt,
+      Long productId, Long sellerId, Instant start, Instant end) {
+    DiscountEntity d = new DiscountEntity();
+    d.code = code; d.label = label; d.percent = pct; d.amount = amt;
+    d.productId = productId; d.sellerId = sellerId; d.startDate = start; d.endDate = end;
+    coupons.save(d);
   }
 }

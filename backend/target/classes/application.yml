@@ -11,11 +11,6 @@ spring:
       hibernate.globally_quoted_identifiers: true
   flyway:
     enabled: true
-    # Migrations qualify every table as ${app_schema}.<table>. Default schema is
-    # dbo (local SQL Server / docker); the `azure` profile overrides it to `mcp`
-    # so the app stays isolated inside a shared Azure SQL database.
-    placeholders:
-      app_schema: dbo
 
 server:
   port: ${PORT:8080}

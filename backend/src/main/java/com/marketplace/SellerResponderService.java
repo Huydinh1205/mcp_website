@@ -35,7 +35,7 @@ public class SellerResponderService {
   }
 
   public void respond(String negotiationId) {
-    NegotiationEntity n = negotiations.findById(negotiationId).orElse(null);
+    NegotiationEntity n = negotiations.findById(Long.valueOf(negotiationId)).orElse(null);
     if (n == null) return;
     if (!"countered".equals(n.status) || !"buyer".equals(n.lastActor)) return;
 
@@ -47,7 +47,7 @@ public class SellerResponderService {
     double buyerPrice = n.currentPrice;
 
     double lastSeller = p.price;
-    var rs = rounds.findByNegotiationIdOrderByRoundNumberAsc(negotiationId);
+    var rs = rounds.findByNegotiationIdOrderByRoundNumberAsc(n.id);
     for (int i = rs.size() - 1; i >= 0; i--) {
       if ("seller".equals(rs.get(i).author)) {
         lastSeller = rs.get(i).proposedPrice;

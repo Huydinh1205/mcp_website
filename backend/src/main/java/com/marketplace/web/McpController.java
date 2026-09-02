@@ -60,7 +60,7 @@ public class McpController {
     List<String> names = new ArrayList<>();
     double cost = 0;
     for (String id : ids) {
-      var p = products.findById(id).orElse(null);
+      var p = products.findById(Long.valueOf(id)).orElse(null);
       if (p != null) {
         names.add(p.name);
         cost += p.minPrice;
@@ -124,12 +124,13 @@ public class McpController {
           }
           double price = dbl(args.get("price")) == null ? Double.NaN : dbl(args.get("price"));
           var n = negotiations.create(buyerId, productId, intOr(args.get("quantity"), 1));
-          var res = negotiations.commitTurn(n.negotiationId, new TurnInput(
-              Side.BUYER, TurnAction.OFFER, price, 0, str(args.get("message")),
+          String newId = String.valueOf(n.id);
+          var res = negotiations.commitTurn(newId, new TurnInput(
+              Side.BUYER, TurnAction.OFFER, price, n.currentRound, str(args.get("message")),
               buildTerms(args, price)));
           if (!res.ok()) return ResponseEntity.status(422).body(Map.of("error", res.error().name()));
-          if (serverSeller()) sellerResponder.respond(n.negotiationId);
-          return ok(reads.negotiationState(n.negotiationId));
+          if (serverSeller()) sellerResponder.respond(newId);
+          return ok(reads.negotiationState(newId));
         }
 
         case "counter_offer": {

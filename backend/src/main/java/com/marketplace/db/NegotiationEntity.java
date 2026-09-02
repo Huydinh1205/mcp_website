@@ -15,6 +15,7 @@ public class NegotiationEntity {
   @Column(name = "Status") public String status = "open";
   @Column(name = "Date") public Instant date = Instant.now();
   @Column(name = "current_round") public int currentRound = 1;
+  @Convert(converter = LowercaseConverter.class)
   @Column(name = "last_actor") public String lastActor;
   @Column(name = "Final_Price") public Double finalPrice;
   @Column(name = "Order_ID") public Long orderId;

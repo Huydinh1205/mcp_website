@@ -38,10 +38,10 @@ public class AuthController {
   public ResponseEntity<?> me() {
     String id = CurrentUser.id();
     if (id == null) return ResponseEntity.status(401).body(Map.of("error", "UNAUTHENTICATED"));
-    var u = users.findById(id).orElse(null);
+    var u = users.findById(Long.valueOf(id)).orElse(null);
     if (u == null) return ResponseEntity.status(401).body(Map.of("error", "UNKNOWN_USER"));
     return ResponseEntity.ok(Map.of(
-        "userId", u.nationalId, "name", (u.firstName + " " + u.lastName).trim(),
+        "userId", String.valueOf(u.id), "name", (u.firstName + " " + u.lastName).trim(),
         "email", u.email, "role", CurrentUser.role()));
   }
 

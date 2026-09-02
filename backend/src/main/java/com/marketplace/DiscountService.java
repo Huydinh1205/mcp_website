@@ -5,15 +5,13 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Seller coupons. Kept OUT of applyTurn (Constitution IV untouched): the coupon
- * is attached to a negotiation and applied to the price at confirmation time.
- * The negotiated (base) price is what the two agents agree on; the coupon is an
- * extra reduction the seller published.
+ * Seller coupons ([App_Coupon]). Kept OUT of applyTurn (Constitution IV): the
+ * coupon attaches to a negotiation and reduces the price at confirmation time.
+ * IDs are Long in the DB; ids crossing the public boundary are Strings.
  */
 @Service
 public class DiscountService {
@@ -28,13 +26,14 @@ public class DiscountService {
     this.products = products;
   }
 
-  // ---- pure -------------------------------------------------------------
+  private static Long lid(String s) { return s == null ? null : Long.valueOf(s); }
+  private static double round2(double n) { return Math.round(n * 100.0) / 100.0; }
 
-  /** Amount to subtract from basePrice for this discount, clamped to [0, basePrice]. */
+  // ---- pure -----------------------------------------------------------------
+
   public double discountAmount(double basePrice, DiscountEntity d) {
     double raw = d.percent != null ? basePrice * d.percent
-        : d.amount != null ? d.amount
-        : 0.0;
+        : d.amount != null ? d.amount : 0.0;
     return Math.max(0.0, Math.min(basePrice, raw));
   }
 
@@ -43,20 +42,20 @@ public class DiscountService {
         && !now.isBefore(d.startDate) && !now.isAfter(d.endDate);
   }
 
-  public boolean appliesTo(DiscountEntity d, String productId, String sellerId) {
+  public boolean appliesTo(DiscountEntity d, Long productId, Long sellerId) {
     if (d.productId != null) return d.productId.equals(productId);
     if (d.sellerId != null) return d.sellerId.equals(sellerId);
     return true; // global
   }
 
-  // ---- persisted ------------------------------------------------------
+  // ---- persisted ----------------------------------------------------------
 
   public List<Map<String, Object>> couponsFor(String productId) {
-    ProductEntity p = products.findById(productId).orElse(null);
+    ProductEntity p = products.findById(lid(productId)).orElse(null);
     if (p == null) return List.of();
     Instant now = Instant.now();
     return discounts.findAll().stream()
-        .filter(d -> isActive(d, now) && appliesTo(d, productId, p.sellerId))
+        .filter(d -> isActive(d, now) && appliesTo(d, p.id, p.sellerId))
         .map(d -> {
           Map<String, Object> m = new LinkedHashMap<>();
           m.put("code", d.code);
@@ -73,20 +72,21 @@ public class DiscountService {
 
   @Transactional
   public ApplyResult applyCoupon(String negotiationId, String code, double basePrice, String productId) {
-    ProductEntity p = products.findById(productId).orElse(null);
+    ProductEntity p = products.findById(lid(productId)).orElse(null);
     if (p == null) return new ApplyResult(false, "PRODUCT_NOT_FOUND", basePrice, basePrice, 0, code);
     DiscountEntity d = discounts.findByCodeIgnoreCase(code == null ? "" : code.trim()).orElse(null);
     if (d == null) return new ApplyResult(false, "INVALID_CODE", basePrice, basePrice, 0, code);
     if (!isActive(d, Instant.now())) return new ApplyResult(false, "EXPIRED", basePrice, basePrice, 0, code);
-    if (!appliesTo(d, productId, p.sellerId))
+    if (!appliesTo(d, p.id, p.sellerId))
       return new ApplyResult(false, "NOT_APPLICABLE", basePrice, basePrice, 0, code);
 
-    boolean already = applied.findByNegotiationId(negotiationId).stream()
-        .anyMatch(a -> a.discountId.equals(d.discountId));
+    Long negId = lid(negotiationId);
+    boolean already = applied.findByNegotiationId(negId).stream()
+        .anyMatch(a -> a.discountId.equals(d.id));
     if (!already) {
       AppliedDiscountEntity a = new AppliedDiscountEntity();
-      a.negotiationId = negotiationId;
-      a.discountId = d.discountId;
+      a.negotiationId = negId;
+      a.discountId = d.id;
       applied.save(a);
     }
     double amt = discountAmount(basePrice, d);
@@ -96,21 +96,18 @@ public class DiscountService {
   /** Total discount recorded on a negotiation, given its base price. */
   public double totalDiscountFor(String negotiationId, double basePrice) {
     double total = 0;
-    for (AppliedDiscountEntity a : applied.findByNegotiationId(negotiationId)) {
+    for (AppliedDiscountEntity a : applied.findByNegotiationId(lid(negotiationId))) {
       DiscountEntity d = discounts.findById(a.discountId).orElse(null);
       if (d != null) total += discountAmount(basePrice, d);
     }
     return round2(Math.min(basePrice, total));
   }
 
-  public String seedDiscount(String code, String label, Double percent, Double amount,
-      String productId, String sellerId, Instant start, Instant end) {
+  public Long seedDiscount(String code, String label, Double percent, Double amount,
+      Long productId, Long sellerId, Instant start, Instant end) {
     DiscountEntity d = new DiscountEntity();
-    d.discountId = UUID.randomUUID().toString().replace("-", "");
     d.code = code; d.label = label; d.percent = percent; d.amount = amount;
     d.productId = productId; d.sellerId = sellerId; d.startDate = start; d.endDate = end;
-    return discounts.save(d).discountId;
+    return discounts.save(d).id;
   }
-
-  private static double round2(double n) { return Math.round(n * 100.0) / 100.0; }
 }

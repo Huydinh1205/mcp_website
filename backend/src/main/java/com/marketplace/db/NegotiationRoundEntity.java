@@ -11,6 +11,7 @@ public class NegotiationRoundEntity {
   @Id @Column(name = "Round_Number") public int roundNumber;
   @Column(name = "Proposed_Price") public double proposedPrice;
   @Column(name = "Message_Context") public String messageContext;
+  @Convert(converter = LowercaseConverter.class)
   @Column(name = "Sender_Type") public String author;
   @Column(name = "Terms") public String terms;
 }

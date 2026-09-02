@@ -14,7 +14,8 @@ public class ProductEntity {
   @Column(name = "Description") public String description;
   @Column(name = "Price") public double price;
   @Column(name = "Min_Price") public double minPrice;
-  @Column(name = "Gap") public Double gap;
+  // Gap is a computed column in the shared schema — read-only.
+  @Column(name = "Gap", insertable = false, updatable = false) public Double gap;
   @Column(name = "Remainings") public int remainings;
   @Column(name = "URL") public String imageUrl;
   @Column(name = "Category") public String category;
