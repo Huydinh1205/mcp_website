@@ -287,9 +287,11 @@ public class MarketplaceReads {
     Map<String, Object> m = new LinkedHashMap<>();
     m.put("product_id", pid);
     m.put("name", p.name);
+    m.put("description", p.description);
     m.put("category", p.category);
     m.put("price", p.price);
     m.put("image_url", imageOf(p));
+    m.put("remaining", p.remainings);
     storefront(m, p);
     m.put("sellers", List.of(shop));
     m.put("avg_rating", modelAvg);

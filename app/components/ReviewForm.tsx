@@ -6,9 +6,11 @@ import { authedFetch } from "@/lib/auth";
 export function ReviewForm({
   productId,
   negotiationId,
+  onDone,
 }: {
   productId: string;
   negotiationId: string;
+  onDone?: () => void;
 }) {
   const [rating, setRating] = useState("5");
   const [comment, setComment] = useState("");
@@ -31,7 +33,10 @@ export function ReviewForm({
     });
     const j = await res.json().catch(() => ({}));
     if (!res.ok) setErr(j.error ?? "failed");
-    else setDone(true);
+    else {
+      setDone(true);
+      onDone?.();
+    }
   };
 
   return (

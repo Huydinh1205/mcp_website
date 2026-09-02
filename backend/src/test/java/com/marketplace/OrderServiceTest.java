@@ -16,15 +16,18 @@ class OrderServiceTest {
   @Autowired NegotiationRepo negotiations;
   @Autowired OrderRepo orders;
   @Autowired InvoiceRepo invoices;
+  @Autowired DeliveryRepo deliveries;
+  @Autowired ProductRepo productRepo;
+  @Autowired UserRepo users;
+  @Autowired FeedbackRepo feedback;
   @Autowired DiscountRepo discountRepo;
   @Autowired AppliedDiscountRepo appliedRepo;
-  @Autowired ProductRepo productRepo;
 
   OrderService svc;
 
   @BeforeEach
   void setup() {
-    svc = new OrderService(negotiations, orders, invoices,
+    svc = new OrderService(negotiations, orders, invoices, deliveries, productRepo, users, feedback,
         new DiscountService(discountRepo, appliedRepo, productRepo));
   }
 

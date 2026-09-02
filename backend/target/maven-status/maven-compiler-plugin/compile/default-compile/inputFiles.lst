@@ -21,6 +21,8 @@
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/BuyerConfigRepo.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/BuyerEntity.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/BuyerRepo.java
+/Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/DeliveryEntity.java
+/Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/DeliveryRepo.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/DiscountEntity.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/DiscountRepo.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/db/FeedbackEntity.java

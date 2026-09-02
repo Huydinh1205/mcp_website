@@ -11,7 +11,8 @@ export function Nav() {
     <nav className="topnav">
       <Link href="/catalog" className="brand">Agent Market</Link>
       <Link href="/catalog">Catalog</Link>
-      {user?.role === "buyer" ? <Link href="/">Buyer</Link> : null}
+      {user?.role === "buyer" ? <Link href="/">Buyer agent</Link> : null}
+      {user?.role === "buyer" ? <Link href="/orders">My orders</Link> : null}
       {user?.role === "seller" ? <Link href="/dashboard">Seller dashboard</Link> : null}
       <span className="hint">Chrome 146+ recommended</span>
       {user ? (

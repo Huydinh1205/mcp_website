@@ -11,6 +11,7 @@ import { API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Stars } from "@/app/components/Stars";
 import { compact, money, ago } from "@/lib/format";
+import { buyNow } from "@/lib/orders";
 
 interface Review {
   rating: number;
@@ -34,6 +35,8 @@ interface SellerRow {
 interface Detail {
   product_id: string;
   name: string;
+  description?: string | null;
+  remaining?: number;
   category: string | null;
   price: number;
   compare_at_price?: number | null;
@@ -111,6 +114,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const [star, setStar] = useState(0); // 0 = all — filters the merged list
   const [openShops, setOpenShops] = useState<Record<string, boolean>>({});
   const [shopStar, setShopStar] = useState<Record<string, number>>({});
+  const [qty, setQty] = useState(1);
+  const [buying, setBuying] = useState<string | null>(null);
+  const [bought, setBought] = useState<{ orderId: string; total: number } | null>(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/products/${encodeURIComponent(id)}`)
@@ -131,10 +137,31 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const bd = d.rating_breakdown ?? [0, 0, 0, 0, 0];
   const hasDisc = (d.discount_pct ?? 0) > 0 && d.compare_at_price;
 
+  const needBuyer = () => {
+    if (!user || user.role !== "buyer") {
+      router.push(`/login?next=/product/${d.product_id}`);
+      return false;
+    }
+    return true;
+  };
+
   const negotiate = (s: SellerRow) => {
-    if (!user || user.role !== "buyer") return router.push("/login?next=/");
-    const goal = `Negotiate the best deal for "${d.name}" from ${s.seller_name} (listed ${s.price}). Use quantity, free add-ons, free shipping and coupons where they help.`;
+    if (!needBuyer()) return;
+    const goal = `Negotiate the best deal for "${d.name}" from ${s.seller_name} (listed ${s.price}), quantity ${qty}. Use quantity, free add-ons, free shipping and coupons where they help.`;
     router.push(`/?goal=${encodeURIComponent(goal)}`);
+  };
+
+  const buy = async (productId: string) => {
+    if (!needBuyer()) return;
+    setBuying(productId);
+    try {
+      const r = await buyNow(productId, qty);
+      setBought({ orderId: r.order_id, total: r.total });
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "buy failed");
+    } finally {
+      setBuying(null);
+    }
   };
 
   return (
@@ -173,13 +200,50 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
           <div className="pdp__tags">
             {d.category ? <span className="chip">{d.category}</span> : null}
             {d.free_shipping ? <span className="chip chip--ship">Free shipping</span> : null}
-            <span className="chip">Human confirms every deal</span>
+            {typeof d.remaining === "number" ? (
+              <span className="chip">{d.remaining} in stock</span>
+            ) : null}
           </div>
 
-          <p className="muted small">
-            Prices are the list price — send your agent to a shop below and it negotiates the real
-            deal (quantity, freebies, free shipping, coupons).
-          </p>
+          <div className="buybar">
+            <label className="qty">
+              Qty
+              <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
+              <input
+                type="number"
+                min={1}
+                value={qty}
+                onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+              />
+              <button type="button" onClick={() => setQty((q) => q + 1)}>+</button>
+            </label>
+            <button
+              className="buynow"
+              disabled={buying === d.product_id}
+              onClick={() => buy(d.product_id)}
+            >
+              {buying === d.product_id ? "Placing…" : `Buy now · $${money(d.price * qty)}`}
+            </button>
+            <button className="secondary" onClick={() => negotiate(d.sellers[0])}>
+              Negotiate with agent
+            </button>
+          </div>
+
+          {bought ? (
+            <p className="ok">
+              Order #{bought.orderId} placed · ${money(bought.total)}.{" "}
+              <a href="/orders">Track it →</a>
+            </p>
+          ) : null}
+
+          {d.description ? (
+            <p className="pdp__desc">{d.description}</p>
+          ) : (
+            <p className="muted small">
+              Buy now at list price, or send an agent to a shop below to negotiate the real deal
+              (quantity, freebies, free shipping, coupons).
+            </p>
+          )}
         </div>
       </div>
 
@@ -202,8 +266,15 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 </div>
                 <div className="shoprow__right">
                   <span className="shoprow__price">${money(s.price)}</span>
-                  <button onClick={() => negotiate(s)}>
-                    {user?.role === "buyer" ? "Send agent to negotiate" : "Log in to negotiate"}
+                  <button
+                    className="buynow"
+                    disabled={buying === s.product_id}
+                    onClick={() => buy(s.product_id)}
+                  >
+                    {buying === s.product_id ? "…" : "Buy now"}
+                  </button>
+                  <button className="secondary" onClick={() => negotiate(s)}>
+                    {user?.role === "buyer" ? "Negotiate" : "Log in"}
                   </button>
                 </div>
               </div>
