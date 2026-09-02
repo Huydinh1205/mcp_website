@@ -4,12 +4,12 @@ import java.io.Serializable;
 import java.util.Objects;
 
 public class NegotiationRoundId implements Serializable {
-  public String negotiationId;
+  public Long negotiationId;
   public int roundNumber;
 
   public NegotiationRoundId() {}
 
-  public NegotiationRoundId(String negotiationId, int roundNumber) {
+  public NegotiationRoundId(Long negotiationId, int roundNumber) {
     this.negotiationId = negotiationId;
     this.roundNumber = roundNumber;
   }

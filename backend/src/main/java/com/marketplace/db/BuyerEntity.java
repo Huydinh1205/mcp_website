@@ -2,8 +2,10 @@ package com.marketplace.db;
 
 import jakarta.persistence.*;
 
-@Entity @Table(name = "buyers")
+/** Shared schema [Buyer]: PK is User_ID (shared with [User], not generated). */
+@Entity @Table(name = "Buyer")
 public class BuyerEntity {
-  @Id @Column(name = "national_id", length = 64) public String nationalId;
-  @Column public String interest;
+  @Id @Column(name = "User_ID") public Long id;
+  @Column(name = "Interest") public String interest;
+  @Column(name = "History_Summary") public String historySummary;
 }

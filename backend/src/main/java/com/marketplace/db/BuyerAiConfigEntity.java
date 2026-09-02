@@ -2,13 +2,14 @@ package com.marketplace.db;
 
 import jakarta.persistence.*;
 
-@Entity @Table(name = "buyer_ai_configs")
+/** Shared schema [Buyer_AI_Config]: Buyer_Agent_ID is bigint IDENTITY. */
+@Entity @Table(name = "Buyer_AI_Config")
 public class BuyerAiConfigEntity {
-  @Id @Column(name = "buyer_agent_id", length = 64) public String buyerAgentId;
-  @Column(name = "max_budget") public double maxBudget;
-  @Column(name = "target_price") public double targetPrice;
-  @Column(name = "min_seller_rating") public double minSellerRating;
-  @Column(name = "is_active") public boolean isActive = true;
-  @Column public String style = "fair";
-  @Column(name = "national_id", length = 64) public String nationalId;
+  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(name = "Buyer_Agent_ID") public Long buyerAgentId;
+  @Column(name = "Buyer_ID") public Long buyerId;
+  @Column(name = "Max_Budget") public double maxBudget;
+  @Column(name = "Target_Price") public double targetPrice;
+  @Column(name = "Min_Seller_Rating") public double minSellerRating;
+  @Column(name = "Style") public String style = "MODERATE";
 }

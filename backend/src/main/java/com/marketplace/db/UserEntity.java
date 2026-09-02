@@ -2,12 +2,15 @@ package com.marketplace.db;
 
 import jakarta.persistence.*;
 
-@Entity @Table(name = "users")
+/** Maps the shared schema's [User] table. PK is bigint IDENTITY. */
+@Entity @Table(name = "User")
 public class UserEntity {
-  @Id @Column(name = "national_id", length = 64) public String nationalId;
-  @Column(name = "first_name") public String firstName;
-  @Column(name = "last_name") public String lastName;
-  @Column public String email;
-  @Column public String role;                          // "buyer" | "seller"
-  @Column(name = "password_hash") public String passwordHash;
+  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(name = "User_ID") public Long id;
+  @Column(name = "First_Name") public String firstName;
+  @Column(name = "Last_Name") public String lastName;
+  @Column(name = "Email") public String email;
+  @Column(name = "Phone_Number") public String phoneNumber;
+  @Column(name = "Password_Hash") public String passwordHash;
+  @Column(name = "Role") public String role;            // "buyer" | "seller"
 }

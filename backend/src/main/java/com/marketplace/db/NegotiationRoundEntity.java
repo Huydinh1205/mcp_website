@@ -2,13 +2,15 @@ package com.marketplace.db;
 
 import jakarta.persistence.*;
 
-@Entity @Table(name = "negotiation_rounds")
+/** Shared schema [Negotiation_Round]: composite PK (Negotiation_ID, Round_Number).
+ *  Column is Sender_Type (we call it author). Terms added for this app. */
+@Entity @Table(name = "Negotiation_Round")
 @IdClass(NegotiationRoundId.class)
 public class NegotiationRoundEntity {
-  @Id @Column(name = "negotiation_id", length = 64) public String negotiationId;
-  @Id @Column(name = "round_number") public int roundNumber;
-  @Column(name = "proposed_price") public double proposedPrice;
-  @Column(name = "message_context") public String messageContext;
-  @Column public String author;
-  @Column(length = 4000) public String terms;
+  @Id @Column(name = "Negotiation_ID") public Long negotiationId;
+  @Id @Column(name = "Round_Number") public int roundNumber;
+  @Column(name = "Proposed_Price") public double proposedPrice;
+  @Column(name = "Message_Context") public String messageContext;
+  @Column(name = "Sender_Type") public String author;
+  @Column(name = "Terms") public String terms;
 }

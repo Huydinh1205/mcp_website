@@ -3,11 +3,15 @@ package com.marketplace.db;
 import jakarta.persistence.*;
 import java.time.Instant;
 
-@Entity @Table(name = "orders")
+/** Shared schema [Order]: Order_ID is bigint IDENTITY.
+ *  Buyer_Confirmed_At / Seller_Confirmed_At added for this app's two-sided confirm. */
+@Entity @Table(name = "Order")
 public class OrderEntity {
-  @Id @Column(name = "order_id", length = 64) public String orderId;
-  @Column public String status = "pending";
-  @Column(name = "order_date") public Instant orderDate = Instant.now();
-  @Column(name = "buyer_confirmed_at") public Instant buyerConfirmedAt;
-  @Column(name = "seller_confirmed_at") public Instant sellerConfirmedAt;
+  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(name = "Order_ID") public Long id;
+  @Column(name = "Delivery_ID") public Long deliveryId;
+  @Column(name = "Status") public String status = "PENDING_PAYMENT";
+  @Column(name = "Order_Date") public Instant orderDate = Instant.now();
+  @Column(name = "Buyer_Confirmed_At") public Instant buyerConfirmedAt;
+  @Column(name = "Seller_Confirmed_At") public Instant sellerConfirmedAt;
 }
