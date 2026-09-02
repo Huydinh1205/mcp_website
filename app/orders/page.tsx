@@ -10,8 +10,14 @@ import { useAuth } from "@/lib/auth";
 import { myOrders, type Order } from "@/lib/orders";
 import { money, ago } from "@/lib/format";
 import { ReviewForm } from "@/app/components/ReviewForm";
+import { Icon } from "@/app/components/Icon";
 
-const STEPS = ["PENDING", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"] as const;
+const STEPS = [
+  { key: "PENDING", label: "Order placed", icon: "check" as const },
+  { key: "IN_TRANSIT", label: "In transit", icon: "package" as const },
+  { key: "OUT_FOR_DELIVERY", label: "Out for delivery", icon: "truck" as const },
+  { key: "DELIVERED", label: "Delivered", icon: "check" as const },
+];
 const LABEL: Record<string, string> = {
   PENDING: "Order placed",
   IN_TRANSIT: "In transit",
@@ -21,14 +27,14 @@ const LABEL: Record<string, string> = {
 };
 
 function Tracker({ status }: { status: string }) {
-  const at = Math.max(0, STEPS.indexOf(status as (typeof STEPS)[number]));
+  const at = Math.max(0, STEPS.findIndex((s) => s.key === status));
   const failed = status === "FAILED";
   return (
     <div className={`track ${failed ? "track--failed" : ""}`}>
       {STEPS.map((s, i) => (
-        <div key={s} className={`track__step ${i <= at ? "on" : ""}`}>
-          <span className="track__dot" />
-          <span className="track__label">{LABEL[s]}</span>
+        <div key={s.key} className={`track__step ${i <= at ? "on" : ""}`}>
+          <span className="track__dot"><Icon name={s.icon} size={11} /></span>
+          <span className="track__label">{s.label}</span>
         </div>
       ))}
     </div>

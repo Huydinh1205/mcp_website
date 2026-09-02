@@ -51,8 +51,12 @@ public class OrderService {
 
   private String addressOf(Long buyerId) {
     return users.findById(buyerId)
-        .map(u -> (u.firstName + " " + u.lastName).trim() + " — address on file")
-        .orElse("Address on file");
+        .map(u -> {
+          String addr = u.fullAddress();
+          String who = (u.firstName + " " + (u.lastName == null ? "" : u.lastName)).trim();
+          return addr != null ? who + " — " + addr : who + " — no address on file";
+        })
+        .orElse("No address on file");
   }
 
   // ------------------------------------------------------------------ buy now

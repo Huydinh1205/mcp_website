@@ -13,6 +13,7 @@ import { Stars } from "@/app/components/Stars";
 import { compact, money, ago } from "@/lib/format";
 import { buyNow } from "@/lib/orders";
 import { addToCart } from "@/lib/cart";
+import { Icon } from "@/app/components/Icon";
 
 interface Review {
   rating: number;
@@ -239,13 +240,16 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               disabled={buying === d.product_id}
               onClick={() => buy(d.product_id)}
             >
+              <Icon name="bolt" size={15} />
               {buying === d.product_id ? "Placing…" : `Buy now · $${money(d.price * qty)}`}
             </button>
             <button className="secondary" onClick={() => addCart(d.sellers[0])}>
-              {added === d.sellers[0]?.product_id ? "Added ✓" : "Add to cart"}
+              <Icon name={added === d.sellers[0]?.product_id ? "check" : "cart"} size={15} />
+              {added === d.sellers[0]?.product_id ? "Added" : "Add to cart"}
             </button>
             <button className="secondary" onClick={() => negotiate(d.sellers[0])}>
-              Negotiate with agent
+              <Icon name="handshake" size={15} />
+              Negotiate
             </button>
           </div>
 

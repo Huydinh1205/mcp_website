@@ -1,13 +1,15 @@
 "use client";
 
-// Storefront listing (US4): search, filters, sort, dense product cards
-// (image · title · price + strike + discount · rating · sold · free-ship).
+// Storefront listing: search, category chips, filters, sort, product cards
+// with a quick add-to-cart.
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { API_BASE } from "@/lib/api";
 import { Stars } from "@/app/components/Stars";
+import { Icon } from "@/app/components/Icon";
 import { compact, money } from "@/lib/format";
+import { addToCart } from "@/lib/cart";
 
 interface Row {
   product_id: string;
@@ -40,6 +42,7 @@ export default function CatalogPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
+  const [added, setAdded] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/categories`).then((r) => r.json()).then(setCategories).catch(() => {});
@@ -63,7 +66,6 @@ export default function CatalogPage() {
     return () => clearTimeout(t);
   }, [q, category, maxPrice, minRating, sort]);
 
-  // one card per product name; keep the cheapest listing + a "from N shops" count
   const cards = useMemo(() => {
     const m = new Map<string, Row & { shops: number }>();
     for (const r of rows) {
@@ -77,33 +79,84 @@ export default function CatalogPage() {
     return [...m.values()];
   }, [rows]);
 
+  const quickAdd = (e: React.MouseEvent, p: Row) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart({
+      product_id: p.product_id,
+      name: p.name,
+      price: p.price,
+      image_url: p.image_url ?? null,
+      seller_name: p.seller_name,
+    });
+    setAdded(p.product_id);
+    setTimeout(() => setAdded(null), 1400);
+  };
+
   return (
     <main className="wrap wide">
-      <div className="listing-head">
-        <h1>Catalog</h1>
-        <label className="sort">
-          Sort
-          <select value={sort} onChange={(e) => setSort(e.target.value)}>
-            {SORTS.map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </select>
-        </label>
+      <div className="hero">
+        <div>
+          <h1 className="hero__title">Shop the catalog</h1>
+          <p className="hero__sub">
+            Buy now at list price, or send an AI agent to haggle the real deal — price,
+            quantity, freebies, free shipping, coupons.
+          </p>
+        </div>
+        <div className="searchbar">
+          <Icon name="search" size={16} />
+          <input placeholder="Search products…" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
       </div>
 
-      <section className="panel filters">
-        <input placeholder="Search products…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="">All categories</option>
+      {categories.length > 0 ? (
+        <div className="chiprow">
+          <button className={`chipbtn ${category === "" ? "on" : ""}`} onClick={() => setCategory("")}>
+            All
+          </button>
           {categories.map((c) => (
-            <option key={c} value={c}>{c}</option>
+            <button
+              key={c}
+              className={`chipbtn ${category === c ? "on" : ""}`}
+              onClick={() => setCategory(category === c ? "" : c)}
+            >
+              {c}
+            </button>
           ))}
-        </select>
-        <input type="number" placeholder="Max price" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} />
-        <input type="number" step="0.1" placeholder="Min rating" value={minRating} onChange={(e) => setMinRating(e.target.value)} />
-      </section>
+        </div>
+      ) : null}
 
-      {loading && cards.length === 0 ? <p className="muted">Loading…</p> : null}
+      <div className="listing-head">
+        <span className="muted small">
+          {loading ? "Loading…" : `${cards.length} product${cards.length === 1 ? "" : "s"}`}
+        </span>
+        <div className="listing-head__right">
+          <input
+            className="mini"
+            type="number"
+            placeholder="Max $"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+          />
+          <input
+            className="mini"
+            type="number"
+            step="0.1"
+            placeholder="Min ★"
+            value={minRating}
+            onChange={(e) => setMinRating(e.target.value)}
+          />
+          <label className="sort">
+            Sort
+            <select value={sort} onChange={(e) => setSort(e.target.value)}>
+              {SORTS.map(([v, l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
+
       {!loading && cards.length === 0 ? <p className="muted">No products match.</p> : null}
 
       <div className="pgrid">
@@ -117,6 +170,13 @@ export default function CatalogPage() {
                   <img src={p.image_url} alt={p.name} loading="lazy" />
                 ) : null}
                 {hasDisc ? <span className="disc">-{p.discount_pct}%</span> : null}
+                <button
+                  className="pcard__add"
+                  title="Add to cart"
+                  onClick={(e) => quickAdd(e, p)}
+                >
+                  <Icon name={added === p.product_id ? "check" : "cart"} size={16} />
+                </button>
               </div>
               <div className="pcard__body">
                 <div className="pcard__name">{p.name}</div>
@@ -131,7 +191,11 @@ export default function CatalogPage() {
                   <span>{compact(p.sold_count ?? 0)} sold</span>
                 </div>
                 <div className="pcard__foot">
-                  {p.free_shipping ? <span className="chip chip--ship">Free shipping</span> : null}
+                  {p.free_shipping ? (
+                    <span className="chip chip--ship">
+                      <Icon name="truck" size={12} /> Free shipping
+                    </span>
+                  ) : null}
                   {p.shops > 1 ? <span className="chip">{p.shops} shops</span> : null}
                 </div>
               </div>
