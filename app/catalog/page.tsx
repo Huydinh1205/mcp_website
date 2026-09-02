@@ -1,27 +1,14 @@
 "use client";
 
-// Storefront listing: search, category chips, filters, sort, product cards
-// with a quick add-to-cart.
+// Storefront listing: search, sidebar filters, sort, paginated product grid.
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { API_BASE } from "@/lib/api";
-import { Stars } from "@/app/components/Stars";
 import { Icon } from "@/app/components/Icon";
-import { compact, money } from "@/lib/format";
-import { addToCart } from "@/lib/cart";
+import { ProductCard, type CardProduct } from "@/app/components/ProductCard";
+import { ProductGridSkeleton } from "@/app/components/Skeleton";
 
-interface Row {
-  product_id: string;
-  name: string;
-  price: number;
-  compare_at_price?: number | null;
-  discount_pct?: number;
-  rating_avg?: number;
-  rating_count?: number;
-  sold_count?: number;
-  free_shipping?: boolean;
-  image_url?: string | null;
+interface Row extends CardProduct {
   seller_name: string;
 }
 
@@ -33,6 +20,9 @@ const SORTS = [
   ["price_desc", "Price: high to low"],
 ] as const;
 
+const RATINGS = [4.5, 4, 3.5, 3];
+const PAGE = 24;
+
 export default function CatalogPage() {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
@@ -41,8 +31,17 @@ export default function CatalogPage() {
   const [sort, setSort] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [added, setAdded] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [shown, setShown] = useState(PAGE);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // hydrate filters from the URL (?category=, ?sort=, ?q=)
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("category")) setCategory(sp.get("category")!);
+    if (sp.get("sort")) setSort(sp.get("sort")!);
+    if (sp.get("q")) setQ(sp.get("q")!);
+  }, []);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/categories`).then((r) => r.json()).then(setCategories).catch(() => {});
@@ -56,6 +55,7 @@ export default function CatalogPage() {
     if (minRating) params.set("minRating", minRating);
     if (sort) params.set("sort", sort);
     setLoading(true);
+    setShown(PAGE);
     const t = setTimeout(() => {
       fetch(`${API_BASE}/api/products?${params}`)
         .then((r) => r.json())
@@ -79,28 +79,74 @@ export default function CatalogPage() {
     return [...m.values()];
   }, [rows]);
 
-  const quickAdd = (e: React.MouseEvent, p: Row) => {
-    e.preventDefault();
-    e.stopPropagation();
-    addToCart({
-      product_id: p.product_id,
-      name: p.name,
-      price: p.price,
-      image_url: p.image_url ?? null,
-      seller_name: p.seller_name,
-    });
-    setAdded(p.product_id);
-    setTimeout(() => setAdded(null), 1400);
-  };
+  const visible = cards.slice(0, shown);
+  const activeFilters =
+    (category ? 1 : 0) + (maxPrice ? 1 : 0) + (minRating ? 1 : 0);
+
+  const Filters = (
+    <aside className="fside">
+      <div className="fside__group">
+        <h3>Category</h3>
+        <button className={`fopt ${category === "" ? "on" : ""}`} onClick={() => setCategory("")}>
+          All categories
+        </button>
+        {categories.map((c) => (
+          <button
+            key={c}
+            className={`fopt ${category === c ? "on" : ""}`}
+            onClick={() => setCategory(category === c ? "" : c)}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+      <div className="fside__group">
+        <h3>Max price</h3>
+        <input
+          type="number"
+          placeholder="Any"
+          value={maxPrice}
+          onChange={(e) => setMaxPrice(e.target.value)}
+        />
+      </div>
+      <div className="fside__group">
+        <h3>Rating</h3>
+        <button className={`fopt ${minRating === "" ? "on" : ""}`} onClick={() => setMinRating("")}>
+          Any
+        </button>
+        {RATINGS.map((r) => (
+          <button
+            key={r}
+            className={`fopt ${minRating === String(r) ? "on" : ""}`}
+            onClick={() => setMinRating(minRating === String(r) ? "" : String(r))}
+          >
+            <Icon name="star" size={12} fill /> {r} & up
+          </button>
+        ))}
+      </div>
+      {activeFilters > 0 ? (
+        <button
+          className="linkbtn"
+          onClick={() => {
+            setCategory("");
+            setMaxPrice("");
+            setMinRating("");
+          }}
+        >
+          Clear filters
+        </button>
+      ) : null}
+    </aside>
+  );
 
   return (
     <main className="wrap wide">
       <div className="hero">
         <div>
-          <h1 className="hero__title">Shop the catalog</h1>
+          <h1 className="hero__title">Catalog</h1>
           <p className="hero__sub">
-            Buy now at list price, or send an AI agent to haggle the real deal — price,
-            quantity, freebies, free shipping, coupons.
+            {loading ? "Loading…" : `${cards.length}+ products`} · buy now, add to cart, or send an
+            agent to negotiate.
           </p>
         </div>
         <div className="searchbar">
@@ -109,99 +155,47 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      {categories.length > 0 ? (
-        <div className="chiprow">
-          <button className={`chipbtn ${category === "" ? "on" : ""}`} onClick={() => setCategory("")}>
-            All
-          </button>
-          {categories.map((c) => (
-            <button
-              key={c}
-              className={`chipbtn ${category === c ? "on" : ""}`}
-              onClick={() => setCategory(category === c ? "" : c)}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
       <div className="listing-head">
-        <span className="muted small">
-          {loading ? "Loading…" : `${cards.length} product${cards.length === 1 ? "" : "s"}`}
-        </span>
-        <div className="listing-head__right">
-          <input
-            className="mini"
-            type="number"
-            placeholder="Max $"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value)}
-          />
-          <input
-            className="mini"
-            type="number"
-            step="0.1"
-            placeholder="Min ★"
-            value={minRating}
-            onChange={(e) => setMinRating(e.target.value)}
-          />
-          <label className="sort">
-            Sort
-            <select value={sort} onChange={(e) => setSort(e.target.value)}>
-              {SORTS.map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
-          </label>
-        </div>
+        <button
+          className="filtertoggle"
+          onClick={() => setFiltersOpen((v) => !v)}
+        >
+          <Icon name="tag" size={14} /> Filters{activeFilters ? ` (${activeFilters})` : ""}
+        </button>
+        <label className="sort">
+          Sort
+          <select value={sort} onChange={(e) => setSort(e.target.value)}>
+            {SORTS.map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+        </label>
       </div>
 
-      {!loading && cards.length === 0 ? <p className="muted">No products match.</p> : null}
-
-      <div className="pgrid">
-        {cards.map((p) => {
-          const hasDisc = (p.discount_pct ?? 0) > 0 && p.compare_at_price;
-          return (
-            <Link key={p.name} href={`/product/${encodeURIComponent(p.product_id)}`} className="pcard">
-              <div className="pcard__media">
-                {p.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.image_url} alt={p.name} loading="lazy" />
-                ) : null}
-                {hasDisc ? <span className="disc">-{p.discount_pct}%</span> : null}
-                <button
-                  className="pcard__add"
-                  title="Add to cart"
-                  onClick={(e) => quickAdd(e, p)}
-                >
-                  <Icon name={added === p.product_id ? "check" : "cart"} size={16} />
-                </button>
+      <div className={`catlayout ${filtersOpen ? "catlayout--open" : ""}`}>
+        {Filters}
+        <div className="catmain">
+          {loading ? (
+            <ProductGridSkeleton n={12} />
+          ) : cards.length === 0 ? (
+            <p className="muted">No products match.</p>
+          ) : (
+            <>
+              <div className="pgrid">
+                {visible.map((p) => (
+                  <ProductCard key={p.product_id} p={p} />
+                ))}
               </div>
-              <div className="pcard__body">
-                <div className="pcard__name">{p.name}</div>
-                <div className="pcard__price">
-                  <span className="now">${money(p.price)}</span>
-                  {hasDisc ? <span className="was">${money(p.compare_at_price!)}</span> : null}
+              {shown < cards.length ? (
+                <div className="loadmore">
+                  <button className="ghostbtn" onClick={() => setShown((s) => s + PAGE)}>
+                    Load more ({cards.length - shown} left)
+                  </button>
                 </div>
-                <div className="pcard__meta">
-                  <Stars value={p.rating_avg ?? 0} />
-                  <span>{(p.rating_avg ?? 0).toFixed(1)}</span>
-                  <span className="dot">·</span>
-                  <span>{compact(p.sold_count ?? 0)} sold</span>
-                </div>
-                <div className="pcard__foot">
-                  {p.free_shipping ? (
-                    <span className="chip chip--ship">
-                      <Icon name="truck" size={12} /> Free shipping
-                    </span>
-                  ) : null}
-                  {p.shops > 1 ? <span className="chip">{p.shops} shops</span> : null}
-                </div>
-              </div>
-            </Link>
-          );
-        })}
+              ) : null}
+            </>
+          )}
+        </div>
       </div>
     </main>
   );

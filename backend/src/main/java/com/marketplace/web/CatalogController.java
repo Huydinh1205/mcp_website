@@ -35,6 +35,13 @@ public class CatalogController {
     return reads.categories();
   }
 
+  @GetMapping("/api/shops/{id}")
+  public ResponseEntity<?> shop(@PathVariable String id) {
+    var s = reads.shopDetail(id);
+    if (s == null) return ResponseEntity.status(404).body(Map.of("error", "NOT_FOUND"));
+    return ResponseEntity.ok(s);
+  }
+
   @GetMapping("/api/products/{id}")
   public ResponseEntity<?> product(@PathVariable String id) {
     var d = reads.productDetail(id, feedback::avgRating, feedback::reviewsFor, feedback::breakdown);

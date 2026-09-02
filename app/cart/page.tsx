@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useCart, setQuantity, removeFromCart, clearCart, checkout } from "@/lib/cart";
 import { money } from "@/lib/format";
+import { toast, toastErr } from "@/lib/toast";
+import { Icon } from "@/app/components/Icon";
 
 export default function CartPage() {
   const user = useAuth();
@@ -23,12 +25,16 @@ export default function CartPage() {
     setErr(null);
     try {
       const lines = await checkout(items);
-      const failed = lines.filter((l) => l.error);
+      const ok = lines.filter((l) => !l.error).length;
+      const failed = lines.length - ok;
       clearCart();
-      if (failed.length) setErr(`${failed.length} item(s) failed`);
+      if (ok) toast(`${ok} order${ok === 1 ? "" : "s"} placed`, "success");
+      if (failed) toastErr(`${failed} item(s) failed`);
       router.push("/orders");
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "checkout failed");
+      const m = e instanceof Error ? e.message : "checkout failed";
+      setErr(m);
+      toastErr(m);
     } finally {
       setBusy(false);
     }
@@ -69,8 +75,14 @@ export default function CartPage() {
                   <button onClick={() => setQuantity(i.product_id, i.quantity + 1)}>+</button>
                 </div>
                 <div className="crow__line">${money(i.price * i.quantity)}</div>
-                <button className="linkbtn crow__rm" onClick={() => removeFromCart(i.product_id)}>
-                  Remove
+                <button
+                  className="linkbtn crow__rm"
+                  onClick={() => {
+                    removeFromCart(i.product_id);
+                    toast("Removed from cart");
+                  }}
+                >
+                  <Icon name="trash" size={13} /> Remove
                 </button>
               </div>
             ))}

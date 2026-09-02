@@ -36,7 +36,7 @@ export default function BuyerPage() {
 
   useEffect(() => {
     if (user === null) return; // still loading
-    if (!user || user.role !== "buyer") router.replace("/login?next=/");
+    if (!user || user.role !== "buyer") router.replace("/login?next=/agent");
   }, [user, router]);
 
   const negotiations = useNegotiationFeed(user?.role === "buyer" ? "buyer" : null);
@@ -82,7 +82,11 @@ export default function BuyerPage() {
 
   return (
     <main className="wrap">
-      <h1>Buyer — {user.name}</h1>
+      <h1>Buyer agent</h1>
+      <p className="muted" style={{ marginTop: -12 }}>
+        Describe what you want. The agent searches shops and haggles price, quantity, freebies,
+        free shipping and coupons — you confirm every deal.
+      </p>
 
       <section className="panel">
         <textarea value={goal} onChange={(e) => setGoal(e.target.value)} rows={3} />

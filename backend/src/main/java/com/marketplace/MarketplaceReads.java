@@ -17,7 +17,7 @@ public class MarketplaceReads {
 
   private static final List<String> LIVE =
       List.of("open", "countered", "buyer_accepted", "seller_accepted");
-  private static final int SEARCH_SCAN = 240;   // shared catalog is ~95k rows
+  private static final int SEARCH_SCAN = 300;   // shared catalog is ~95k rows; client paginates
 
   private final ProductRepo products;
   private final SellerRepo sellers;
@@ -99,7 +99,7 @@ public class MarketplaceReads {
       default -> null;
     };
     if (cmp != null) stream = stream.sorted(cmp);
-    var list = stream.limit(60).toList();
+    var list = stream.toList();   // up to SEARCH_SCAN; the client paginates
 
     // batch the seller/user lookups (remote DB — avoid N+1)
     var sellerIds = list.stream().map(p -> p.sellerId).filter(java.util.Objects::nonNull).distinct().toList();
@@ -124,6 +124,38 @@ public class MarketplaceReads {
       storefront(m, p);
       return m;
     }).toList();
+  }
+
+  /** A shop's storefront: the seller + the products they carry. */
+  public Map<String, Object> shopDetail(String sellerId) {
+    Long sid = lid(sellerId);
+    if (sid == null || sid < 0) return null;
+    var s = sellers.findById(sid).orElse(null);
+    var u = users.findById(sid).orElse(null);
+    if (s == null && u == null) return null;
+
+    var items = products.findBySellerId(sid).stream()
+        .limit(120)
+        .map(p -> {
+          Map<String, Object> m = new LinkedHashMap<>();
+          m.put("product_id", String.valueOf(p.id));
+          m.put("name", p.name);
+          m.put("price", p.price);
+          m.put("category", p.category);
+          m.put("image_url", imageOf(p));
+          storefront(m, p);
+          return m;
+        })
+        .toList();
+
+    Map<String, Object> m = new LinkedHashMap<>();
+    m.put("seller_id", sellerId);
+    m.put("name", sellerName(sid));
+    m.put("rating", s != null ? s.rating : 0.0);
+    m.put("total_ratings", s != null ? s.totalRatings : 0);
+    m.put("product_count", items.size());
+    m.put("products", items);
+    return m;
   }
 
   public Map<String, Object> getProduct(String productId, String buyerId) {

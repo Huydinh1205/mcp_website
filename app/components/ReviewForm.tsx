@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { authedFetch } from "@/lib/auth";
+import { toast, toastErr } from "@/lib/toast";
 
 export function ReviewForm({
   productId,
@@ -32,9 +33,12 @@ export function ReviewForm({
       }),
     });
     const j = await res.json().catch(() => ({}));
-    if (!res.ok) setErr(j.error ?? "failed");
-    else {
+    if (!res.ok) {
+      setErr(j.error ?? "failed");
+      toastErr(j.error ?? "Review failed");
+    } else {
       setDone(true);
+      toast("Thanks for the review!", "success");
       onDone?.();
     }
   };
