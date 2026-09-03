@@ -35,6 +35,13 @@ export interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
   content: string;
   toolCallId?: string;
+  /** Set on an assistant message that triggered tool calls — the subsequent
+   *  "tool" messages' toolCallId refer back into this list. Required by
+   *  providers (Gemini's OpenAI-compat layer included) to resolve which
+   *  function a tool result belongs to. */
+  toolCalls?: LlmToolCall[];
+  /** Set on a "tool" message: the name of the tool that produced it. */
+  name?: string;
 }
 
 export type LoopEvent =
@@ -86,6 +93,7 @@ export async function runAgentLoop(opts: RunOptions): Promise<LoopEvent[]> {
     messages.push({
       role: "assistant",
       content: response.content ?? "",
+      toolCalls: response.toolCalls,
     });
 
     for (const tc of response.toolCalls) {
@@ -111,6 +119,7 @@ export async function runAgentLoop(opts: RunOptions): Promise<LoopEvent[]> {
       messages.push({
         role: "tool",
         toolCallId: tc.id,
+        name: tc.name,
         content: JSON.stringify(result ?? null),
       });
     }

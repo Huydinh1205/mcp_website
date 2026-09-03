@@ -48,6 +48,22 @@ public class AgentTurnService {
       mn.put("content", m.get("content") == null ? "" : String.valueOf(m.get("content")));
       Object tcid = m.get("toolCallId");
       if (tcid != null) mn.put("tool_call_id", String.valueOf(tcid));
+      Object name = m.get("name");
+      if (name != null) mn.put("name", String.valueOf(name));
+      Object toolCalls = m.get("toolCalls");
+      if (toolCalls instanceof List<?> tcList && !tcList.isEmpty()) {
+        ArrayNode tcArr = mn.putArray("tool_calls");
+        for (Object tco : tcList) {
+          if (!(tco instanceof Map<?, ?> tcMap)) continue;
+          ObjectNode tcNode = tcArr.addObject();
+          tcNode.put("id", String.valueOf(tcMap.get("id")));
+          tcNode.put("type", "function");
+          ObjectNode fn = tcNode.putObject("function");
+          fn.put("name", String.valueOf(tcMap.get("name")));
+          Object args = tcMap.get("arguments");
+          fn.put("arguments", args == null ? "{}" : json.writeValueAsString(args));
+        }
+      }
     }
     if (tools != null && !tools.isEmpty()) {
       ArrayNode ts = body.putArray("tools");
