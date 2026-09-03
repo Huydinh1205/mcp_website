@@ -1,0 +1,34 @@
+# Render Blueprint for the backend. New + → "Blueprint" → pick this repo.
+# Frontend goes to Vercel separately (Next.js auto-detected).
+services:
+  - type: web
+    name: agent-marketplace-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/categories
+    envVars:
+      # --- Azure SQL (fill these in the Render dashboard) ---
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      # --- app ---
+      - key: SPRING_FLYWAY_ENABLED
+        value: "false"          # thanh owns the schema
+      - key: SELLER_MODE
+        value: server           # one-window demo; set "browser" for two-agent
+      - key: FRONTEND_ORIGIN
+        value: "*"              # CORS: JWT in header, no cookies
+      - key: CONFIRM_TOKEN_SECRET
+        generateValue: true
+      # --- LLM for the in-page agent loop (optional) ---
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gemini-2.5-flash
+      - key: OPENAI_BASE_URL
+        value: https://generativelanguage.googleapis.com/v1beta/openai
