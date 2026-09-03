@@ -8,4 +8,5 @@ public record AppProps(
     String sellerMode,
     String openaiApiKey,
     String openaiModel,
+    String openaiBaseUrl,   // OpenAI, or an OpenAI-compatible endpoint (e.g. Gemini)
     String corsOrigin) {}

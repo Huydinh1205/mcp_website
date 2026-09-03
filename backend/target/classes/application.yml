@@ -20,6 +20,7 @@ app:
   seller-mode: ${SELLER_MODE:server}
   openai-api-key: ${OPENAI_API_KEY:}
   openai-model: ${OPENAI_MODEL:gpt-4o-mini}
+  openai-base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
   cors-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
 
 logging:

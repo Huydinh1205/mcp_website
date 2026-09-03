@@ -88,8 +88,10 @@ public class AgentTurnService {
   }
 
   private JsonNode post(String key, ObjectNode body) throws Exception {
+    String base = props.openaiBaseUrl() == null || props.openaiBaseUrl().isBlank()
+        ? "https://api.openai.com/v1" : props.openaiBaseUrl().replaceAll("/+$", "");
     HttpRequest req = HttpRequest.newBuilder()
-        .uri(URI.create("https://api.openai.com/v1/chat/completions"))
+        .uri(URI.create(base + "/chat/completions"))
         .timeout(Duration.ofSeconds(45))
         .header("Authorization", "Bearer " + key)
         .header("Content-Type", "application/json")
