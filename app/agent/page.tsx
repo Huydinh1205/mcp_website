@@ -9,6 +9,7 @@ import { buildSystemPrompt } from "@/lib/personas";
 import { useNegotiationFeed, bestPerProduct } from "@/lib/useNegotiationFeed";
 import { useAuth } from "@/lib/auth";
 import { DealView } from "@/app/components/DealView";
+import { NegotiationChat } from "@/app/components/NegotiationChat";
 import { ConfirmModal } from "@/app/components/ConfirmModal";
 import { TakeoverControls } from "@/app/components/TakeoverControls";
 import { ReviewForm } from "@/app/components/ReviewForm";
@@ -114,6 +115,7 @@ export default function BuyerPage() {
         ) : (
           negotiations.map((n) => (
             <div key={n.negotiationId}>
+              <NegotiationChat negotiation={n} youAre="buyer" />
               <DealView negotiation={n} />
               <TakeoverControls
                 side="buyer"

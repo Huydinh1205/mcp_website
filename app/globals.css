@@ -815,3 +815,45 @@ h1 svg, h2 svg { opacity: .7; }
 @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
 .pcard--skel { pointer-events: none; }
 .pcard--skel .pcard__media { display: block; }
+
+/* ===== negotiation chat box (both /agent and /dashboard) ================== */
+.nchat {
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface); margin-bottom: 10px; overflow: hidden;
+}
+.nchat__head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  background: var(--surface-2); font-size: 13px;
+}
+.nchat__head .muted { margin-left: auto; }
+.nchat__live {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--success);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 60%, transparent);
+  animation: nlive 1.6s ease-out infinite;
+}
+.nchat__live.off { background: var(--text-faint); animation: none; box-shadow: none; }
+@keyframes nlive {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 55%, transparent); }
+  100% { box-shadow: 0 0 0 7px transparent; }
+}
+.nchat__body {
+  padding: 14px; display: flex; flex-direction: column; gap: 8px;
+  max-height: 300px; overflow-y: auto;
+}
+.nbub {
+  max-width: 78%; padding: 8px 12px; border-radius: 14px; font-size: 13px;
+  border: 1px solid var(--border);
+}
+.nbub__who { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; opacity: .65; margin-bottom: 2px; }
+.nbub__msg { line-height: 1.4; }
+.nbub__price { font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.nbub--buyer  { background: var(--primary-soft); border-color: color-mix(in srgb, var(--primary) 25%, var(--border)); }
+.nbub--seller { background: var(--accent-soft);  border-color: color-mix(in srgb, var(--accent) 25%, var(--border)); }
+.nbub--me   { align-self: flex-end; }
+.nbub--them { align-self: flex-start; }
+.nbub:last-of-type { animation: nbubin .25s ease; }
+@keyframes nbubin { from { opacity: 0; transform: translateY(6px); } }
+.nchat__typing { align-self: center; font-size: 11px; color: var(--text-muted); font-style: italic; padding: 2px 0; }
+.nchat__typing--ok { color: var(--success); font-style: normal; font-weight: 600; }
+.nchat__typing--no { color: var(--danger); font-style: normal; font-weight: 600; }

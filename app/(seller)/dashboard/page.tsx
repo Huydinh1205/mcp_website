@@ -13,6 +13,7 @@ import { sellerAgentPrompt } from "@/lib/personas";
 import { useNegotiationFeed } from "@/lib/useNegotiationFeed";
 import { useAuth } from "@/lib/auth";
 import { DealView } from "@/app/components/DealView";
+import { NegotiationChat } from "@/app/components/NegotiationChat";
 import { ConfirmModal } from "@/app/components/ConfirmModal";
 import { TakeoverControls } from "@/app/components/TakeoverControls";
 
@@ -100,6 +101,7 @@ export default function SellerDashboard() {
         ) : (
           negotiations.map((n) => (
             <div key={n.negotiationId}>
+              <NegotiationChat negotiation={n} youAre="seller" />
               <DealView negotiation={n} />
               <TakeoverControls
                 side="seller"
