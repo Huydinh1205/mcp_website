@@ -8,8 +8,8 @@ confirmation** before it is placed.
 **Runs in Chrome 146+ / ChatGPT's in-app browser** (WebMCP `document.modelContext`).
 The app also works without it — the same tools drive an in-page agent loop.
 
-- **Live demo:** _<add after deploy>_
-- **Demo video:** _<add YouTube link>_
+- **Live demo:** https://mcp-website-chi.vercel.app/
+- **Demo video:** https://youtu.be/Dmi2gS94qh4
 - **Submission write-up:** [`SUBMISSION.md`](SUBMISSION.md)
 - **License:** MIT ([`LICENSE`](LICENSE))
 

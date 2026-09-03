@@ -1,8 +1,8 @@
 # Agent Negotiation Marketplace — WebMCP Challenge submission
 
-**Live URL:** _<paste after deploy>_
+**Live URL:** https://mcp-website-chi.vercel.app/
 **Repo:** https://github.com/Huydinh1205/mcp_website
-**Demo video:** _<paste YouTube link>_
+**Demo video:** https://youtu.be/Dmi2gS94qh4
 
 A multi‑vendor storefront (95k+ real products) where a shopper's browser agent
 and a seller's agent **negotiate a multi‑dimensional deal** — price, quantity,
@@ -84,7 +84,10 @@ looking at" task, and negotiation is the part that a plain REST integration
    cheapest to my cart"* — watch it call `search_products` then `add_to_cart`.
 3. Press **Checkout** → **My orders** shows the order + delivery tracking.
 4. For negotiation: log in as the demo buyer (`mai.demo@example.com` /
-   `password`), open a KeyLab Store product, press **Negotiate**, **Start
-   agent**; in a second window log in as `keylab.demo@example.com`, open the
-   **Seller dashboard**, tick **Auto‑respond**. Both agents settle; both humans
-   **Confirm**.
+   `password`) — or register a fresh buyer — open a KeyLab Store product, press
+   **Negotiate**, then **Start agent**. The agent haggles the deal against the
+   store's pricing agent (running server‑side) and stops at a **Confirm** dialog;
+   press **Confirm** to place the order, then leave a review.
+   *(A second browser agent can play the seller instead — set `SELLER_MODE=browser`,
+   open the **Seller dashboard** as `keylab.demo@example.com` in a separate
+   Incognito window, tick **Auto‑respond**.)*
