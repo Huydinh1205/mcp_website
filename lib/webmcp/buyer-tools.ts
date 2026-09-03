@@ -86,7 +86,9 @@ export function buildBuyerRegistry(): ToolRegistryImpl {
   reg.register({
     name: "submit_offer",
     description:
-      "Open a negotiation with an opening deal (price + optional quantity / freebies / free shipping). Returns the seller's response.",
+      "Open a negotiation with an opening deal (price + optional quantity / freebies / free shipping). " +
+      "Returns the seller's response. If a negotiation for this product is already live the current " +
+      "state is returned with \"already_open\": true — continue it with counter_offer / accept_offer.",
     parameters: OBJ(
       { product_id: { type: "string" }, price: { type: "number" }, message: { type: "string" }, ...DEAL_PROPS },
       ["product_id", "price"],
@@ -116,10 +118,10 @@ export function buildBuyerRegistry(): ToolRegistryImpl {
     name: "accept_offer",
     description:
       "Accept the seller's current deal. Does NOT place an order — returns a token for the human to " +
-      "confirm. round_seen is optional (omit to accept the seller's latest response).",
+      "confirm. Pass round_seen = current_round from the state you are accepting (required).",
     parameters: OBJ(
       { negotiation_id: { type: "string" }, round_seen: { type: "integer" } },
-      ["negotiation_id"],
+      ["negotiation_id", "round_seen"],
     ),
     execute: (a) => call("accept_offer", a),
   });

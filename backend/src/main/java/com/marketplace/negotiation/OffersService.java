@@ -24,8 +24,9 @@ import org.springframework.stereotype.Service;
 public class OffersService {
 
   // Shared-schema negotiations open at round 1 (CHK_Negotiation_CurrentRound),
-  // so the opening offer lands on round 2. Cap of 4 leaves ~2 counter exchanges.
-  public static final int ROUND_CAP = 4;
+  // so the opening offer lands on round 2. Cap of 8 leaves ~3 counter exchanges
+  // before the seller is forced to settle — enough for a visible haggle.
+  public static final int ROUND_CAP = 8;
 
   public TurnResult applyTurn(NegotiationSnapshot s, TurnInput in) {
     Side actor = in.actor();
@@ -49,12 +50,18 @@ public class OffersService {
       return err(CLOSED);
     }
 
-    // 2. Optimistic round guard — opt-in. A caller that passes the round it acted
-    //    on (roundSeen >= 0) gets a STALE error if the negotiation moved under it.
-    //    A caller that omits it (roundSeen < 0) is trusting the current server
-    //    state; this is the common path for the in-page agent, which otherwise
-    //    stalls forever the moment its round number drifts.
-    if (in.roundSeen() >= 0 && in.roundSeen() != s.currentRound()) {
+    // 2. Optimistic round guard.
+    //    - ACCEPT is always guarded: it mints a binding confirm token, and the
+    //      caller has necessarily just read the state it is accepting, so it can
+    //      always supply the round. A missing round (-1) fails here too.
+    //    - OFFER / COUNTER are guarded only when the caller opts in by passing the
+    //      round it acted on. Omitting it means "act on the current server state":
+    //      moves are still bounded by budget / floor / step / round cap below, the
+    //      DB write is a compare-and-set on the round, and the human confirms the
+    //      final deal — so the worst case is a bounded counter the agent didn't
+    //      pre-acknowledge, versus the agent stalling forever on a drifted round.
+    boolean guardRound = action == ACCEPT || in.roundSeen() >= 0;
+    if (guardRound && in.roundSeen() != s.currentRound()) {
       return err(STALE);
     }
 

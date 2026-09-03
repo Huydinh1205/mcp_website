@@ -119,8 +119,14 @@ public class McpController {
         case "submit_offer": {
           if (buyerId == null) return badSession();
           String productId = str(args.get("product_id"));
-          if (negotiations.findOpenForBuyer(buyerId, productId).isPresent()) {
-            return ResponseEntity.status(409).body(Map.of("error", "ALREADY_OPEN"));
+          var openNeg = negotiations.findOpenForBuyer(buyerId, productId);
+          if (openNeg.isPresent()) {
+            // Already negotiating this item. Hand back the live state (marked
+            // already_open) so the agent continues it with counter_offer /
+            // accept_offer instead of dead-ending on an error and looking stuck.
+            var state = reads.negotiationState(String.valueOf(openNeg.get().id));
+            state.put("already_open", true);
+            return ok(state);
           }
           double price = dbl(args.get("price")) == null ? Double.NaN : dbl(args.get("price"));
           var n = negotiations.create(buyerId, productId, intOr(args.get("quantity"), 1));
