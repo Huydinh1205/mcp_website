@@ -20,7 +20,7 @@ services:
       - key: SPRING_FLYWAY_ENABLED
         value: "false"          # thanh owns the schema
       - key: SELLER_MODE
-        value: server           # one-window demo; set "browser" for two-agent
+        value: browser          # two-agent demo: buyer runs /agent, seller runs /dashboard
       - key: FRONTEND_ORIGIN
         value: "*"              # CORS: JWT in header, no cookies
       - key: CONFIRM_TOKEN_SECRET
