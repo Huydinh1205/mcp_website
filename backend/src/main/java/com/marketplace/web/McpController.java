@@ -159,6 +159,9 @@ public class McpController {
           var res = negotiations.commitTurn(negId, new TurnInput(
               Side.BUYER, TurnAction.ACCEPT, null, intOr(args.get("round_seen"), -1), null));
           if (!res.ok()) return ResponseEntity.status(422).body(Map.of("error", res.error().name()));
+          // Server-seller mode: the seller is pre-authorised, so confirm its side
+          // as soon as the buyer accepts — the deal then only awaits the human.
+          if (serverSeller()) sellerResponder.respond(negId);
           return ok(Map.of(
               "negotiation_id", negId,
               "status", res.status().wire(),

@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { runAgentLoop, type LoopEvent } from "@/lib/agent-loop";
 import { browserLlmTurn } from "@/lib/browserLlm";
 import { buildBuyerRegistry } from "@/lib/webmcp/buyer-tools";
 import { buildSystemPrompt } from "@/lib/personas";
 import { useNegotiationFeed, bestPerProduct } from "@/lib/useNegotiationFeed";
-import { useAuth } from "@/lib/auth";
+import { useAuth, authedFetch } from "@/lib/auth";
 import { DealView } from "@/app/components/DealView";
 import { NegotiationChat } from "@/app/components/NegotiationChat";
 import { ConfirmModal } from "@/app/components/ConfirmModal";
@@ -29,6 +29,7 @@ export default function BuyerPage() {
   const [events, setEvents] = useState<LoopEvent[]>([]);
   const [tokens, setTokens] = useState<Record<string, string>>({});
   const [placed, setPlaced] = useState<Record<string, string>>({});
+  const autoAccepted = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const qGoal = new URLSearchParams(window.location.search).get("goal");
@@ -43,6 +44,51 @@ export default function BuyerPage() {
   const negotiations = useNegotiationFeed(user?.role === "buyer" ? "buyer" : null);
   const best = useMemo(() => bestPerProduct(negotiations), [negotiations]);
   const multiSeller = negotiations.length > best.length;
+
+  // Safety net: the agent (a small model) sometimes stops mid-negotiation with a
+  // deal already on the table — the seller accepted, or countered at/under the
+  // ceiling and it's the buyer's move. When the loop is idle, lock that deal in
+  // once so the negotiation reaches the confirm step instead of sitting half
+  // done. The human still confirms the price in the modal; nothing is bought here.
+  useEffect(() => {
+    if (running) return;
+    for (const n of negotiations) {
+      if (tokens[n.negotiationId] || placed[n.negotiationId]) continue;
+      if (autoAccepted.current.has(n.negotiationId)) continue;
+      const dealOnTable =
+        n.status === "seller_accepted" ||
+        (n.status === "countered" &&
+          n.lastActor === "seller" &&
+          n.currentPrice > 0 &&
+          n.currentPrice <= CFG.maxBudget);
+      if (!dealOnTable) continue;
+      autoAccepted.current.add(n.negotiationId);
+      authedFetch("/api/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          tool: "accept_offer",
+          args: { negotiation_id: n.negotiationId, round_seen: n.currentRound },
+        }),
+      })
+        .then((r) => r.json())
+        .then((r: { confirm_token?: string; error?: string }) => {
+          if (r?.confirm_token) {
+            setTokens((p) => ({ ...p, [n.negotiationId]: r.confirm_token! }));
+            setEvents((prev) => [
+              ...prev,
+              {
+                type: "assistant",
+                content: `Locked in the deal on "${n.name}" at ${n.currentPrice.toFixed(2)} — confirm below.`,
+              },
+            ]);
+          } else {
+            autoAccepted.current.delete(n.negotiationId); // let a later tick retry
+          }
+        })
+        .catch(() => autoAccepted.current.delete(n.negotiationId));
+    }
+  }, [running, negotiations, tokens, placed]);
 
   const onEvent = (e: LoopEvent) => {
     setEvents((prev) => [...prev, e]);

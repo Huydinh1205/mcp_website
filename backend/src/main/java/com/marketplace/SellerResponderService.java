@@ -37,6 +37,15 @@ public class SellerResponderService {
   public void respond(String negotiationId) {
     NegotiationEntity n = negotiations.findById(Long.valueOf(negotiationId)).orElse(null);
     if (n == null) return;
+
+    // Buyer has locked in an accept (agent or the page's safety net). In
+    // server-seller mode the seller is pre-authorised, so confirm its side now
+    // and the deal only waits on the human's confirm click.
+    if ("buyer_accepted".equals(n.status)) {
+      acceptAsSeller(negotiationId, n.currentRound);
+      return;
+    }
+
     if (!"countered".equals(n.status) || !"buyer".equals(n.lastActor)) return;
 
     ProductEntity p = products.findById(n.productId).orElseThrow();
@@ -60,6 +69,15 @@ public class SellerResponderService {
       return;
     }
 
+    // Settle fast: after the opening exchange (buyer has countered at least once,
+    // so the round is 4+), accept anything at or above the floor. This bounds the
+    // negotiation to one counter round each side and guarantees it ends in a
+    // deal, so the buyer agent never stalls partway through a long tool loop.
+    if (n.currentRound >= OffersService.ROUND_CAP && buyerPrice >= minPrice) {
+      acceptAsSeller(negotiationId, n.currentRound);
+      return;
+    }
+
     double midpoint = buyerPrice + (lastSeller - buyerPrice) / 2.0;
     double counter = round2(Math.max(minPrice, Math.max(lastSeller - maxStep, midpoint)));
 
@@ -76,10 +94,6 @@ public class SellerResponderService {
           Side.SELLER, TurnAction.COUNTER, buyerPrice, n.currentRound,
           "I'll match your " + round2(buyerPrice) + " and throw in free shipping.",
           new com.marketplace.negotiation.DealTerms(buyerPrice, n.quantity, java.util.List.of(), 0, true)));
-      return;
-    }
-    if (n.currentRound >= OffersService.ROUND_CAP && buyerPrice >= minPrice) {
-      acceptAsSeller(negotiationId, n.currentRound);
       return;
     }
 

@@ -38,6 +38,7 @@ function buyerPrompt(p: BuyerPersona): string {
     `A deal is more than a number: you can bundle QUANTITY, ask the seller to throw in cheap FREE add-ons (call list_addons), or ask for FREE SHIPPING. Use these to close a deal you like even if the seller will not drop the price further.`,
     `After you and the seller settle on terms, call list_coupons and apply_coupon to squeeze the price down more if a valid code exists.`,
     `Search for a matching product, compare sellers, make an opening offer, counter toward your target, and accept once the total deal is at or below your target (or clearly the best you will get before the round limit).`,
+    `Do NOT haggle more than one counter round. As soon as the seller's price is at or below the item's list price, call accept_offer — a small saving now beats stalling.`,
     SHARED,
   ].join(" ");
 }

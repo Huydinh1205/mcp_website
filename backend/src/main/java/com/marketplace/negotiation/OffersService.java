@@ -24,9 +24,10 @@ import org.springframework.stereotype.Service;
 public class OffersService {
 
   // Shared-schema negotiations open at round 1 (CHK_Negotiation_CurrentRound),
-  // so the opening offer lands on round 2. Cap of 8 leaves ~3 counter exchanges
-  // before the seller is forced to settle — enough for a visible haggle.
-  public static final int ROUND_CAP = 8;
+  // so the opening offer lands on round 2. Cap of 4 => opening + one counter each
+  // side, then someone must accept. The server-mode seller settles by round 4 so
+  // the buyer agent never has to run a long tool loop.
+  public static final int ROUND_CAP = 4;
 
   public TurnResult applyTurn(NegotiationSnapshot s, TurnInput in) {
     Side actor = in.actor();
