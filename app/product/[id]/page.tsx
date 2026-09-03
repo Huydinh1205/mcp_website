@@ -117,7 +117,14 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
   const gallery = useMemo(() => {
     if (!d?.image_url) return [];
-    return [d.image_url, ...[1, 2, 3].map((k) => `https://picsum.photos/seed/pv${d.product_id}-${k}/600/700`)];
+    const main = d.image_url;
+    // derive matching thumbnails by nudging the seed/lock so they stay on-topic
+    const variants = [1, 2, 3].map((k) =>
+      /[?&]lock=/.test(main)
+        ? main.replace(/([?&]lock=)([^&]+)/, `$1$2${k}`)
+        : `https://picsum.photos/seed/pv${d.product_id}-${k}/600/700`,
+    );
+    return [main, ...variants];
   }, [d]);
 
   const shownReviews = useMemo(

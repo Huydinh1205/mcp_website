@@ -58,7 +58,8 @@ public class SeedRunner implements CommandLineRunner {
     for (ProductEntity p : page) {
       p.sellerId = shopId;
       p.category = cats[i % cats.length];
-      p.imageUrl = "https://picsum.photos/seed/keylab" + p.id + "/500/600";
+      p.imageUrl = "https://loremflickr.com/600/700/" + cats[i % cats.length].toLowerCase()
+          + "/all?lock=" + p.id;
       if (p.compareAtPrice == null || p.compareAtPrice <= p.price) {
         p.compareAtPrice = Math.round(p.price * 1.35 * 100.0) / 100.0;
       }
