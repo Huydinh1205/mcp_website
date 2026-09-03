@@ -49,8 +49,12 @@ public class OffersService {
       return err(CLOSED);
     }
 
-    // 2. Optimistic round guard.
-    if (in.roundSeen() != s.currentRound()) {
+    // 2. Optimistic round guard — opt-in. A caller that passes the round it acted
+    //    on (roundSeen >= 0) gets a STALE error if the negotiation moved under it.
+    //    A caller that omits it (roundSeen < 0) is trusting the current server
+    //    state; this is the common path for the in-page agent, which otherwise
+    //    stalls forever the moment its round number drifts.
+    if (in.roundSeen() >= 0 && in.roundSeen() != s.currentRound()) {
       return err(STALE);
     }
 

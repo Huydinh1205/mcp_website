@@ -97,7 +97,8 @@ export function buildBuyerRegistry(): ToolRegistryImpl {
   reg.register({
     name: "counter_offer",
     description:
-      "Counter in an existing negotiation with a full deal. Pass round_seen from the latest state you read.",
+      "Counter in an existing negotiation with a full deal. Omit round_seen to act on the seller's " +
+      "latest response; only pass it (the round you acted on) if you want a stale-state check.",
     parameters: OBJ(
       {
         negotiation_id: { type: "string" },
@@ -106,7 +107,7 @@ export function buildBuyerRegistry(): ToolRegistryImpl {
         message: { type: "string" },
         ...DEAL_PROPS,
       },
-      ["negotiation_id", "price", "round_seen"],
+      ["negotiation_id", "price"],
     ),
     execute: (a) => call("counter_offer", a),
   });
@@ -114,10 +115,11 @@ export function buildBuyerRegistry(): ToolRegistryImpl {
   reg.register({
     name: "accept_offer",
     description:
-      "Accept the seller's current deal. Does NOT place an order — returns a token for the human to confirm.",
+      "Accept the seller's current deal. Does NOT place an order — returns a token for the human to " +
+      "confirm. round_seen is optional (omit to accept the seller's latest response).",
     parameters: OBJ(
       { negotiation_id: { type: "string" }, round_seen: { type: "integer" } },
-      ["negotiation_id", "round_seen"],
+      ["negotiation_id"],
     ),
     execute: (a) => call("accept_offer", a),
   });
