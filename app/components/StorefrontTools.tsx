@@ -179,19 +179,40 @@ export function StorefrontTools() {
   useEffect(() => {
     const mc = (window as unknown as { document?: { modelContext?: { registerTool?: (d: unknown) => void } } })
       .document?.modelContext;
-    if (!mc?.registerTool) return; // API not present (older Chrome / not WebMCP) — no-op
-    for (const t of TOOLS) {
-      try {
-        mc.registerTool({
-          name: t.name,
-          description: t.description,
-          inputSchema: t.inputSchema,
-          execute: (args: unknown) => t.execute((args ?? {}) as Record<string, unknown>),
-        });
-      } catch {
-        /* best effort */
+
+    let registered = 0;
+    if (mc?.registerTool) {
+      for (const t of TOOLS) {
+        try {
+          mc.registerTool({
+            name: t.name,
+            description: t.description,
+            inputSchema: t.inputSchema,
+            execute: (args: unknown) => t.execute((args ?? {}) as Record<string, unknown>),
+          });
+          registered++;
+        } catch {
+          /* best effort */
+        }
       }
     }
+
+    // Debug hook: inspect / invoke the exact registered tools from DevTools console.
+    //   webmcpTools()                         -> list
+    //   webmcpCall("search_products",{query:"robe"})
+    const w = window as unknown as Record<string, unknown>;
+    w.__webmcpTools = TOOLS;
+    w.webmcpTools = () =>
+      TOOLS.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema }));
+    w.webmcpCall = (name: string, args?: Record<string, unknown>) => {
+      const t = TOOLS.find((x) => x.name === name);
+      if (!t) throw new Error(`no tool: ${name}`);
+      return t.execute(args ?? {});
+    };
+    console.info(
+      `[WebMCP] document.modelContext ${mc ? "present" : "absent"} · ${registered}/${TOOLS.length} tools registered · ` +
+        `console: webmcpTools(), webmcpCall("search_products",{query:"robe"})`,
+    );
   }, []);
   return null;
 }
