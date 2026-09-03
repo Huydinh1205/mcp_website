@@ -1,6 +1,7 @@
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/AgentTurnService.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/AppProps.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/Application.java
+/Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/CatalogStatsBackfillRunner.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/DiscountService.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/FeedService.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/FeedbackService.java
@@ -8,6 +9,7 @@
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/MarketplaceReads.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/OpenApiConfig.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/OrderService.java
+/Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/ReviewBackfillRunner.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/SeedRunner.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/SellerResponderService.java
 /Users/huydinh/Desktop/Projects/mcp_website/backend/src/main/java/com/marketplace/TokenService.java
