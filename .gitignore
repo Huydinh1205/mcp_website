@@ -41,3 +41,4 @@ TODOS.md
 # maven
 target/
 !.mvn/wrapper/maven-wrapper.jar
+.vscode/

@@ -13,6 +13,7 @@ import { API_BASE } from "@/lib/api";
 import { getAuth, authedFetch } from "@/lib/auth";
 import { addToCart, getCart, setQuantity } from "@/lib/cart";
 import { toast } from "@/lib/toast";
+import { registerNativeTool } from "@/lib/webmcp/native";
 
 type ToolDef = {
   name: string;
@@ -183,17 +184,13 @@ export function StorefrontTools() {
     let registered = 0;
     if (mc?.registerTool) {
       for (const t of TOOLS) {
-        try {
-          mc.registerTool({
-            name: t.name,
-            description: t.description,
-            inputSchema: t.inputSchema,
-            execute: (args: unknown) => t.execute((args ?? {}) as Record<string, unknown>),
-          });
-          registered++;
-        } catch {
-          /* best effort */
-        }
+        registerNativeTool({
+          name: t.name,
+          description: t.description,
+          inputSchema: t.inputSchema,
+          execute: (args: unknown) => t.execute((args ?? {}) as Record<string, unknown>),
+        });
+        registered++;
       }
     }
 

@@ -5,6 +5,7 @@
 // harness. The harness imports THIS, never the page's internals.
 
 import type { DiscoveredTool, ToolRegistry } from "@/lib/agent-loop";
+import { registerNativeTool } from "@/lib/webmcp/native";
 
 export interface RegisteredTool {
   name: string;
@@ -19,22 +20,12 @@ export class ToolRegistryImpl implements ToolRegistry {
   register(tool: RegisteredTool): void {
     this.tools.set(tool.name, tool);
 
-    const mc = (globalThis as { document?: { modelContext?: unknown } }).document
-      ?.modelContext as
-      | { registerTool?: (def: unknown) => void }
-      | undefined;
-    if (mc?.registerTool) {
-      try {
-        mc.registerTool({
-          name: tool.name,
-          description: tool.description,
-          inputSchema: tool.parameters,
-          execute: (args: unknown) => tool.execute(args),
-        });
-      } catch {
-        /* best effort — our harness still works without it */
-      }
-    }
+    registerNativeTool({
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.parameters,
+      execute: (args: unknown) => tool.execute(args),
+    });
   }
 
   listTools(): DiscoveredTool[] {
