@@ -5,8 +5,44 @@ and a seller's AI agent negotiate price through structured tools exposed via
 WebMCP (`document.modelContext`); every order requires explicit **human
 confirmation** before it is placed.
 
-**Runs in Chrome 146+** (only browser with `document.modelContext`). The app also
-works without it — the harness falls back to its own tool registry.
+**Runs in Chrome 146+ / ChatGPT's in-app browser** (WebMCP `document.modelContext`).
+The app also works without it — the same tools drive an in-page agent loop.
+
+- **Live demo:** _<add after deploy>_
+- **Demo video:** _<add YouTube link>_
+- **Submission write-up:** [`SUBMISSION.md`](SUBMISSION.md)
+- **License:** MIT ([`LICENSE`](LICENSE))
+
+## WebMCP in one glance
+
+Every page registers the storefront tools on `document.modelContext`
+(`app/components/StorefrontTools.tsx`); `/agent` and `/dashboard` add the full
+buyer/seller negotiation sets via `lib/webmcp/registry.ts`:
+
+```ts
+document.modelContext.registerTool({
+  name: "search_products",
+  description: "Search the product catalog",
+  inputSchema: {
+    type: "object",
+    properties: { query: { type: "string" }, category: { type: "string" }, max_price: { type: "number" } },
+    required: ["query"],
+  },
+  execute: async (input) => {
+    const p = new URLSearchParams({ q: input.query });
+    if (input.category) p.set("category", input.category);
+    if (input.max_price != null) p.set("maxPrice", String(input.max_price));
+    return (await fetch(`${API_BASE}/api/products?${p}`)).json();
+  },
+});
+```
+
+Tools registered: `search_products`, `get_product`, `list_categories`,
+`add_to_cart`, `view_cart`, `update_cart_quantity`, `list_coupons`,
+`start_negotiation`, `list_my_orders` (storefront) + `submit_offer`,
+`counter_offer`, `accept_offer`, `respond_to_offer`, `list_addons`,
+`apply_coupon`, … (negotiation). An agent can shop and open a negotiation, but
+**ordering always needs a human click** — Checkout / Confirm.
 
 ## Layout
 
@@ -74,6 +110,23 @@ npm run dev                           # http://localhost:3000
 
 US4 (compare sellers): buyer goal "compare every seller" → one negotiation per seller + a *best offer per product* panel.
 US5 (manual takeover): every negotiation card has a **Take over** toggle.
+
+## Deploy (live URL for judges)
+
+The database is already cloud (Azure SQL). Deploy the two apps:
+
+**Backend → Render / Railway / Fly** (any Docker or Java host)
+- Build: `cd backend && ./mvnw -q -DskipTests package` · Run: `java -jar target/*.jar`
+- Env: `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` (Azure SQL),
+  `SPRING_FLYWAY_ENABLED=false`, `SELLER_MODE=server`, `FRONTEND_ORIGIN=<your Vercel URL>`,
+  `CONFIRM_TOKEN_SECRET=<random>`, optionally `OPENAI_API_KEY` + `OPENAI_BASE_URL` + `OPENAI_MODEL`.
+- The Azure SQL firewall must allow the host's egress IP (or `0.0.0.0`–`255.255.255.255`).
+
+**Frontend → Vercel / Netlify**
+- Framework: Next.js, root = repo root.
+- Env: `NEXT_PUBLIC_API_BASE=https://<your backend URL>`.
+
+Then set the deployed frontend URL as `FRONTEND_ORIGIN` on the backend and redeploy.
 
 ## Tests
 
