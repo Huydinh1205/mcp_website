@@ -75,6 +75,22 @@ describe("runAgentLoop", () => {
     expect(events.at(-1)).toMatchObject({ type: "done", reason: "error" });
   });
 
+  test("llm turn throws -> error event, loop ends with reason error", async () => {
+    const llm = vi.fn(async () => {
+      throw new Error("agent turn failed: 401");
+    });
+
+    const events = await runAgentLoop({
+      systemPrompt: "x",
+      goal: "y",
+      registry: fakeRegistry(),
+      llmTurn: llm,
+    });
+
+    expect(events.some((e) => e.type === "error")).toBe(true);
+    expect(events.at(-1)).toMatchObject({ type: "done", reason: "error" });
+  });
+
   test("model never stops -> loop ends at maxSteps with reason round_cap", async () => {
     const registry = fakeRegistry();
     const llm = scriptedLlm([call("search_products")]); // always asks for a tool

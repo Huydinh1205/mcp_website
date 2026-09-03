@@ -46,8 +46,14 @@ public class JwtService {
     try {
       Claims c = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
       String role = c.get("role", String.class);
-      if (c.getSubject() == null || role == null) return null;
-      return new Principal(c.getSubject(), role);
+      String sub = c.getSubject();
+      if (sub == null || role == null) return null;
+      // Users are identified by a numeric id in this build. A non-numeric subject
+      // (e.g. "B-001") is a stale token from an older id scheme — reject it so the
+      // client clears the session and re-authenticates, instead of the id blowing
+      // up later as a NumberFormatException deep in the negotiation layer.
+      if (!sub.matches("\\d+")) return null;
+      return new Principal(sub, role);
     } catch (RuntimeException e) {
       return null;
     }

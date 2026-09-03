@@ -79,7 +79,20 @@ export async function runAgentLoop(opts: RunOptions): Promise<LoopEvent[]> {
   ];
 
   for (let step = 0; step < maxSteps; step++) {
-    const response = await llmTurn(messages, tools);
+    let response: LlmResponse;
+    try {
+      response = await llmTurn(messages, tools);
+    } catch (e) {
+      // A failed turn (network, 401 from a stale token, upstream 5xx) must surface
+      // as an event — otherwise the caller's `await` just rejects and the UI shows
+      // nothing at all.
+      emit({
+        type: "error",
+        message: `llm turn failed: ${e instanceof Error ? e.message : String(e)}`,
+      });
+      emit({ type: "done", reason: "error" });
+      return events;
+    }
 
     if (response.toolCalls.length === 0) {
       if (response.content) {

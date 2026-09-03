@@ -67,4 +67,10 @@ class AuthTest {
     String tok = auth.login("tk@example.com", "secret123").token();
     assertThat(jwt.parse(tok.substring(0, tok.length() - 3) + "xxx")).isNull();
   }
+
+  @Test
+  void nonNumericSubject_rejected() {
+    // Stale token from an older id scheme; users are numeric-id now.
+    assertThat(jwt.parse(jwt.mint("B-001", "buyer"))).isNull();
+  }
 }
