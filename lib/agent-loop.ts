@@ -19,6 +19,10 @@ export interface LlmToolCall {
   id: string;
   name: string;
   arguments: unknown;
+  /** Opaque provider metadata for this call (e.g. Gemini's thought_signature).
+   *  The server round-trips it; thinking models 400 if it isn't echoed back on
+   *  the next turn. Undefined for providers that don't emit it. */
+  extraContent?: unknown;
 }
 
 export interface LlmResponse {

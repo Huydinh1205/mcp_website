@@ -62,6 +62,12 @@ public class AgentTurnService {
           fn.put("name", String.valueOf(tcMap.get("name")));
           Object args = tcMap.get("arguments");
           fn.put("arguments", args == null ? "{}" : json.writeValueAsString(args));
+          // Gemini "thinking" models (2.5+/3.x) attach an opaque thought signature
+          // to each tool call and reject the next turn's history unless it is
+          // echoed back verbatim. Non-Gemini providers never send this, so it's
+          // simply absent for them.
+          Object extra = tcMap.get("extraContent");
+          if (extra != null) tcNode.set("extra_content", json.valueToTree(extra));
         }
       }
     }
@@ -92,10 +98,17 @@ public class AgentTurnService {
       } catch (Exception e) {
         args = Map.of();
       }
-      toolCalls.add(Map.of(
-          "id", tc.path("id").asText(),
-          "name", tc.path("function").path("name").asText(),
-          "arguments", args));
+      Map<String, Object> call = new java.util.HashMap<>();
+      call.put("id", tc.path("id").asText());
+      call.put("name", tc.path("function").path("name").asText());
+      call.put("arguments", args);
+      // Carry the provider's opaque per-call metadata (Gemini thought signature)
+      // back to the client so it survives into the next turn's history.
+      JsonNode extra = tc.get("extra_content");
+      if (extra != null && !extra.isNull()) {
+        call.put("extraContent", json.convertValue(extra, Object.class));
+      }
+      toolCalls.add(call);
     }
     Map<String, Object> result = new java.util.HashMap<>();
     result.put("content", msg.hasNonNull("content") ? msg.get("content").asText() : null);

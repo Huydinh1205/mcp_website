@@ -29,7 +29,7 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
-        value: gemini-2.5-flash   # 3.x flash hard-rejects our OpenAI-compat tool history
-                                  # (missing thought_signature -> 400); 2.5-flash tolerates it
+        value: gemini-3.6-flash   # 2.5-flash is now blocked for new keys (404). 3.x needs the
+                                  # thought_signature round-trip in AgentTurnService (done).
       - key: OPENAI_BASE_URL
         value: https://generativelanguage.googleapis.com/v1beta/openai
