@@ -45,23 +45,16 @@ export default function BuyerPage() {
   const best = useMemo(() => bestPerProduct(negotiations), [negotiations]);
   const multiSeller = negotiations.length > best.length;
 
-  // Safety net: the agent (a small model) sometimes stops mid-negotiation with a
-  // deal already on the table — the seller accepted, or countered at/under the
-  // ceiling and it's the buyer's move. When the loop is idle, lock that deal in
-  // once so the negotiation reaches the confirm step instead of sitting half
-  // done. The human still confirms the price in the modal; nothing is bought here.
+  // Safety net: if the agent stops after the seller has ACCEPTED but before the
+  // buyer side is locked in (no confirm token yet), finish that one step so the
+  // negotiation reaches the confirm dialog instead of sitting half done. The
+  // human still confirms the price in the modal; nothing is bought here.
   useEffect(() => {
     if (running) return;
     for (const n of negotiations) {
       if (tokens[n.negotiationId] || placed[n.negotiationId]) continue;
       if (autoAccepted.current.has(n.negotiationId)) continue;
-      const dealOnTable =
-        n.status === "seller_accepted" ||
-        (n.status === "countered" &&
-          n.lastActor === "seller" &&
-          n.currentPrice > 0 &&
-          n.currentPrice <= CFG.maxBudget);
-      if (!dealOnTable) continue;
+      if (n.status !== "seller_accepted") continue;
       autoAccepted.current.add(n.negotiationId);
       authedFetch("/api/mcp", {
         method: "POST",
@@ -94,7 +87,7 @@ export default function BuyerPage() {
     setEvents((prev) => [...prev, e]);
     if (
       e.type === "tool_result" &&
-      (e.name === "accept_offer" || e.name === "respond_to_offer") &&
+      (e.name === "accept_offer" || e.name === "respond_to_offer" || e.name === "negotiate") &&
       e.result &&
       typeof e.result === "object" &&
       "confirm_token" in e.result &&

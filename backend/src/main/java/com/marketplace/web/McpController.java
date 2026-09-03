@@ -30,19 +30,28 @@ public class McpController {
   private final MarketplaceReads reads;
   private final NegotiationService negotiations;
   private final SellerResponderService sellerResponder;
+  private final com.marketplace.AutoNegotiationService autoNegotiation;
+  private final com.marketplace.TokenService tokens;
   private final DiscountService discounts;
   private final ProductRepo products;
   private final AppProps props;
 
   public McpController(MarketplaceReads reads, NegotiationService negotiations,
-      SellerResponderService sellerResponder, DiscountService discounts,
-      ProductRepo products, AppProps props) {
+      SellerResponderService sellerResponder, com.marketplace.AutoNegotiationService autoNegotiation,
+      com.marketplace.TokenService tokens, DiscountService discounts, ProductRepo products,
+      AppProps props) {
     this.reads = reads;
     this.negotiations = negotiations;
     this.sellerResponder = sellerResponder;
+    this.autoNegotiation = autoNegotiation;
+    this.tokens = tokens;
     this.discounts = discounts;
     this.products = products;
     this.props = props;
+  }
+
+  private static double round2(double n) {
+    return Math.round(n * 100.0) / 100.0;
   }
 
   private boolean serverSeller() {
@@ -114,6 +123,70 @@ public class McpController {
           return ok(Map.of(
               "code", r.code(), "base_price", r.basePrice(),
               "discount", r.discount(), "effective_price", r.effectivePrice()));
+        }
+
+        case "negotiate": {
+          // One-call negotiation: opens the deal, haggles both sides to a
+          // settlement on the server, and (server-seller mode) returns a confirm
+          // token. The buyer agent calls this once instead of running a fragile
+          // submit_offer -> counter_offer -> accept_offer tool loop.
+          if (buyerId == null) return badSession();
+          String productId = str(args.get("product_id"));
+          Long pid;
+          try { pid = Long.valueOf(productId); } catch (Exception e) { return notFound(); }
+          var prod = products.findById(pid).orElse(null);
+          if (prod == null) return notFound();
+
+          Double maxPrice = dbl(args.get("max_price"));
+          Double target = dbl(args.get("target_price"));
+          double ceiling = maxPrice != null ? maxPrice : (target != null ? target : prod.price);
+          ceiling = Math.min(ceiling, prod.price); // never pay above list via negotiate
+
+          String negId;
+          var open = negotiations.findOpenForBuyer(buyerId, productId);
+          if (open.isPresent()) {
+            negId = String.valueOf(open.get().id);
+          } else {
+            double opening = round2(
+                target != null ? Math.min(target, ceiling) * 0.9 : ceiling * 0.85);
+            var n = negotiations.create(buyerId, productId, intOr(args.get("quantity"), 1));
+            negId = String.valueOf(n.id);
+            var res = negotiations.commitTurn(negId, new TurnInput(
+                Side.BUYER, TurnAction.OFFER, opening, n.currentRound,
+                "Opening offer.", buildTerms(args, opening)));
+            if (!res.ok()) return ResponseEntity.status(422).body(Map.of("error", res.error().name()));
+            if (serverSeller()) sellerResponder.respond(negId);
+          }
+          // negId is resolved from the JWT buyerId (findOpenForBuyer is scoped to
+          // it; create sets it), never from the request body — but assert it
+          // explicitly so this stays true if the handler is ever refactored, and
+          // so it matches the ownership guard on every other negotiation tool.
+          if (!negotiations.buyerOwns(negId, buyerId)) return notFound();
+
+          String confirmToken = serverSeller() ? autoNegotiation.run(negId, ceiling) : null;
+
+          var state = reads.negotiationState(negId);
+          String status = String.valueOf(state.get("status"));
+          if (confirmToken == null && "seller_accepted".equals(status)) {
+            // Loop ended because the seller accepted the buyer's price — lock in
+            // the buyer side now so the page can show the confirm dialog.
+            int rnd = ((Number) state.get("current_round")).intValue();
+            var acc = negotiations.commitTurn(negId,
+                new TurnInput(Side.BUYER, TurnAction.ACCEPT, null, rnd, null));
+            confirmToken = acc.ok() ? acc.confirmToken() : null;
+          }
+          if (confirmToken == null
+              && ("seller_accepted".equals(status) || "buyer_accepted".equals(status))) {
+            // Deal is already accepted on both sides (e.g. a re-run after a page
+            // reload lost the token). The confirm token is a deterministic HMAC,
+            // so re-issue it — the human still has to confirm the price.
+            confirmToken = tokens.mint(negId, Side.BUYER);
+          }
+          if (confirmToken != null) {
+            state.put("confirm_token", confirmToken);
+            state.put("requires_human_confirmation", true);
+          }
+          return ok(state);
         }
 
         case "submit_offer": {

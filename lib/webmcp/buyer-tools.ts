@@ -84,6 +84,31 @@ export function buildBuyerRegistry(): ToolRegistryImpl {
   });
 
   reg.register({
+    name: "negotiate",
+    description:
+      "Negotiate and settle a deal for ONE product in a single call: opens the negotiation, haggles " +
+      "with the seller over several rounds, and returns the settled state — including a confirm_token " +
+      "for the human when a deal is reached. Use this for a normal purchase. Only reach for " +
+      "submit_offer / counter_offer / accept_offer when you need to drive each round yourself.",
+    parameters: OBJ(
+      {
+        product_id: { type: "string" },
+        max_price: { type: "number", description: "hard ceiling — never settle above this" },
+        target_price: { type: "number", description: "the price you would like to reach" },
+        quantity: { type: "integer", minimum: 1 },
+        freebies: {
+          type: "array",
+          items: { type: "string" },
+          description: "product_ids (from list_addons) to ask the seller to include free",
+        },
+        free_shipping: { type: "boolean" },
+      },
+      ["product_id", "max_price"],
+    ),
+    execute: (a) => call("negotiate", a),
+  });
+
+  reg.register({
     name: "submit_offer",
     description:
       "Open a negotiation with an opening deal (price + optional quantity / freebies / free shipping). " +

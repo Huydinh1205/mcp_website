@@ -36,9 +36,8 @@ function buyerPrompt(p: BuyerPersona): string {
     `Your target price is ${p.targetPrice}. Open below it and try to close at or under it.`,
     `Only consider sellers with a rating of at least ${p.minSellerRating}.`,
     `A deal is more than a number: you can bundle QUANTITY, ask the seller to throw in cheap FREE add-ons (call list_addons), or ask for FREE SHIPPING. Use these to close a deal you like even if the seller will not drop the price further.`,
-    `After you and the seller settle on terms, call list_coupons and apply_coupon to squeeze the price down more if a valid code exists.`,
-    `Search for a matching product, compare sellers, make an opening offer, counter toward your target, and accept once the total deal is at or below your target (or clearly the best you will get before the round limit).`,
-    `Do NOT haggle more than one counter round. As soon as the seller's price is at or below the item's list price, call accept_offer — a small saving now beats stalling.`,
+    `Search for a matching product and compare sellers. To buy, call \`negotiate\` once with the product_id and your budget as max_price (add target_price if you have one, and quantity / freebies / free_shipping if they help) — it runs the whole haggle and returns a deal with a confirm_token for the human. Only fall back to submit_offer / counter_offer / accept_offer if you need to drive each round yourself.`,
+    `After a deal is reached, call list_coupons and apply_coupon to squeeze the final price down more if a valid code exists.`,
     SHARED,
   ].join(" ");
 }
