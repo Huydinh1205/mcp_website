@@ -320,7 +320,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 className="shoprow__toggle"
                 onClick={() => setOpenShops((p) => ({ ...p, [s.product_id]: !p[s.product_id] }))}
               >
-                {open ? "Hide" : "Show"} this shop&apos;s reviews ({s.reviews.length})
+                {open ? "Hide" : "Show"} this shop&apos;s ratings
+                {s.reviews.length > 0 ? ` (${s.reviews.length} written)` : ""}
               </button>
               {open ? (
                 <div className="shoprow__reviews">
@@ -331,7 +332,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                   />
                   <div className="reviews">
                     {revs.length === 0 ? (
-                      <p className="muted">No reviews {sStar ? `with ${sStar}★` : "yet"}.</p>
+                      <p className="muted">
+                        {sStar ? `No written reviews with ${sStar}★.` : "No written reviews for this shop yet."}
+                      </p>
                     ) : (
                       revs.map((r, i) => <ReviewItem key={i} r={r} showShop={false} />)
                     )}
@@ -344,18 +347,27 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       </section>
 
       <section className="panel">
-        <h2>All reviews · {d.sellers.length} shops</h2>
+        <h2>Ratings &amp; reviews</h2>
         <div className="rsummary">
           <div className="rsummary__score">
             <div className="big">{rating.toFixed(1)}</div>
             <Stars value={rating} size={16} />
-            <div className="muted small">{compact(total)} ratings</div>
+            <div className="muted small">{compact(total)} catalog ratings</div>
           </div>
           <Breakdown bd={bd} active={star} onPick={setStar} />
         </div>
         <div className="reviews">
           {shownReviews.length === 0 ? (
-            <p className="muted">No reviews {star ? `with ${star}★` : "yet"}.</p>
+            star ? (
+              <p className="muted">No written reviews with {star}★.</p>
+            ) : (
+              <p className="muted">
+                {total > 0
+                  ? `${compact(total)} shoppers rated this ${rating.toFixed(1)}★, but no one has written a review here yet. `
+                  : "No reviews yet. "}
+                Buy it and be the first to write one.
+              </p>
+            )
           ) : (
             shownReviews.map((r, i) => <ReviewItem key={i} r={r} showShop />)
           )}
